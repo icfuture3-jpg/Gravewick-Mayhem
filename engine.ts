@@ -13,10 +13,9 @@ import {
   type EnemyKind,
 } from "./art";
 import { createSound } from "./audio";
-import { LORE, loreFor } from "./lore";
+import { LORE, loreFor } from "./brawl/lore";
 import { drawFigure } from "./heroes";
-import { loadSprites } from "./sprites";
-import { ENDING, INTRO, type Scene } from "./movies";
+import { ENDING, INTRO, type Scene } from "./movie";
 
 export type Mode = "story" | "endless";
 export type Phase = "title" | "playing" | "paused" | "over" | "victory";
@@ -229,7 +228,6 @@ export function createBrawl(
     throw new Error("Canvas is not available");
   }
   const sound = createSound();
-  loadSprites();
   const keys = new Set<string>();
   let lastMouseMove = -10;
   let movie: { scenes: Scene[]; i: number; t: number; done: () => void } | null = null;
@@ -687,23 +685,6 @@ export function createBrawl(
     keys.clear();
     mouse.left = false;
     mouse.right = false;
-    playVoice(scenes[0]?.voice);
-  };
-  let voice: HTMLAudioElement | null = null;
-  const stopVoice = () => {
-    voice?.pause();
-    voice = null;
-  };
-  const playVoice = (name: string | undefined) => {
-    stopVoice();
-    if (name === undefined || muteState.on) return;
-    try {
-      voice = new Audio(new URL(`../assets/${name}.mp3`, import.meta.url).href);
-      voice.volume = 0.95;
-      void voice.play().catch(() => {});
-    } catch {
-      voice = null;
-    }
   };
   const advanceMovie = () => {
     if (movie === null) return;
@@ -715,729 +696,8 @@ export function createBrawl(
     movie.i += 1;
     movie.t = 0;
     if (movie.i >= movie.scenes.length) endMovie();
-    else playVoice(movie.scenes[movie.i]?.voice);
-  };
-import {
-  H,
-  STAGE_NAMES,
-  TAU,
-  W,
-  drawBackground,
-  drawEnemy,
-  drawHero,
-  drawShadow,
-  makeDecor,
-  motionOf,
-  type Decor,
-  type EnemyKind,
-} from "./art";
-import { createSound } from "./audio";
-import { LORE, loreFor } from "./lore";
-import { drawFigure } from "./heroes";
-import { loadSprites } from "./sprites";
-import { ENDING, INTRO, type Scene } from "./movies";
-
-export type Mode = "story" | "endless";
-export type Phase = "title" | "playing" | "paused" | "over" | "victory";
-export interface Summary {
-  score: number;
-  kills: number;
-  stage: number;
-  wave: number;
-  mode: Mode;
-}
-export interface Brawl {
-  start(mode: Mode): void;
-  togglePause(): void;
-  quit(): void;
-  setMuted(muted: boolean): void;
-  destroy(): void;
-}
-
-const PAD = 36;
-const PLAYER_R = 14;
-
-interface HeroDef {
-  name: string;
-  color: string;
-  speed: number;
-  primaryCd: number;
-  skillName: string;
-  skillCd: number;
-  ultName: string;
-  barks: string[];
-}
-
-const HEROES: HeroDef[] = [
-  {
-    name: "Grimble",
-    color: "#7a4cd8",
-    speed: 235,
-    primaryCd: 0.38,
-    skillName: "Rift",
-    skillCd: 9,
-    ultName: "Harvest of Doom",
-    barks: ["Your time is up.", "Another soul for the pile.", "Boo-hoo."],
-  },
-  {
-    name: "Pip",
-    color: "#e0503a",
-    speed: 215,
-    primaryCd: 0.55,
-    skillName: "Dynamite Pie",
-    skillCd: 5,
-    ultName: "PANIC!",
-    barks: ["Ham time!", "Whoa, I did that?", "Hee hee hee!"],
-  },
-  {
-    name: "Wisp",
-    color: "#b05cf0",
-    speed: 225,
-    primaryCd: 0.28,
-    skillName: "Dread Stare",
-    skillCd: 11,
-    ultName: "The Forbidden Smile",
-    barks: ["Pathetic.", "Do as I say.", "Smile. Now."],
-  },
-];
-
-const STAGE_CUTS: [number, string][][] = [
-  [
-    [0, "Well, well, well... what have we wandered into?"],
-    [1, "Ooh, a spooky place! Can I whack something?"],
-    [2, "Try to keep up, you two. I'll handle the thinking."],
-  ],
-  [[2, "These halls are colder than I expected."], [1, "Cold? I'm in shorts!"]],
-  [[0, "The Hollow Court. Stay close, apprentices."], [2, "For once, I agree with you."]],
-];
-const BOSS_CUTS: [number, string][] = [
-  [1, "That one is HUGE. I love it!"],
-  [2, "Illusion time. Try to keep up!"],
-  [0, "Last one. Make Gravewick proud!"],
-];
-const CLEAR_CUTS = ["Not bad, not bad at all.", "Hmph. Fine. I'm impressed.", "Another one down!"];
-
-const ENEMY: Record<
-  EnemyKind,
-  { hp: number; r: number; speed: number; touch: number; name: string; score: number }
-> = {
-  clown: { hp: 40, r: 16, speed: 115, touch: 8, name: "Nightmare Clown", score: 100 },
-  bat: { hp: 26, r: 13, speed: 95, touch: 5, name: "Eyeball Bat", score: 120 },
-  ghoul: { hp: 130, r: 22, speed: 62, touch: 0, name: "Bone Ghoul", score: 250 },
-  slime: { hp: 55, r: 20, speed: 55, touch: 7, name: "Ecto Slime", score: 130 },
-  minislime: { hp: 20, r: 12, speed: 85, touch: 4, name: "Slimelet", score: 40 },
-  boogeyman: { hp: 700, r: 44, speed: 45, touch: 12, name: "The Boogeyman", score: 2000 },
-  nergal: { hp: 900, r: 46, speed: 38, touch: 12, name: "Lord Nergal", score: 3000 },
-  meteor: { hp: 1100, r: 54, speed: 0, touch: 0, name: "Brain Meteor", score: 4000 },
-};
-
-const BOSSES: EnemyKind[] = ["boogeyman", "nergal", "meteor"];
-
-interface Enemy {
-  kind: EnemyKind;
-  x: number;
-  y: number;
-  hp: number;
-  max: number;
-  r: number;
-  kx: number;
-  ky: number;
-  freeze: number;
-  fear: number;
-  flash: number;
-  atk: number;
-  t1: number;
-  t2: number;
-  state: number;
-  phase: number;
-  boss: boolean;
-}
-
-interface Shot {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  r: number;
-  dmg: number;
-  friendly: boolean;
-  life: number;
-  kind: "bolt" | "pie" | "snot" | "laser" | "orb";
-  bounces: number;
-}
-
-interface Zone {
-  kind: "rift" | "meteor" | "sweep";
-  x: number;
-  y: number;
-  r: number;
-  t: number;
-  dur: number;
-  ang: number;
-  dealt: boolean;
-  tick: number;
-}
-
-interface Particle {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  life: number;
-  max: number;
-  color: string;
-  size: number;
-}
-
-interface Float {
-  x: number;
-  y: number;
-  text: string;
-  life: number;
-  color: string;
-}
-
-interface Slash {
-  x: number;
-  y: number;
-  ang: number;
-  arc: number;
-  range: number;
-  life: number;
-  color: string;
-}
-
-interface HeroState {
-  hp: number;
-  cdPrimary: number;
-  cdSkill: number;
-}
-
-export function makeWave(mode: Mode, stage: number, wave: number): EnemyKind[] {
-  const list: EnemyKind[] = [];
-  const s = mode === "story" ? stage + 1 : 1 + Math.floor(wave / 3);
-  const w = mode === "story" ? wave : wave % 3;
-  const clowns = mode === "story" ? 2 + s + w : 2 + Math.ceil((wave + 1) / 2);
-  const bats = mode === "story" ? (w >= 1 ? s + w - 1 : 0) : Math.floor((wave + 1) / 2);
-  const ghouls =
-    mode === "story"
-      ? (w >= 2 ? 1 : 0) + (s >= 2 ? s - 1 : 0)
-      : Math.floor((wave + 1) / 3);
-  const slimes = mode === "story" ? (w >= 1 ? w + s - 1 : 0) : Math.floor((wave + 2) / 3);
-  for (let i = 0; i < clowns; i += 1) {
-    list.push("clown");
-  }
-  for (let i = 0; i < bats; i += 1) {
-    list.push("bat");
-  }
-  for (let i = 0; i < ghouls; i += 1) {
-    list.push("ghoul");
-  }
-  for (let i = 0; i < slimes; i += 1) {
-    list.push("slime");
-  }
-  return list.sort(() => Math.random() - 0.5);
-}
-
-export function createBrawl(
-  canvas: HTMLCanvasElement,
-  onPhase: (phase: Phase, summary: Summary) => void,
-): Brawl {
-  const ctx = canvas.getContext("2d");
-  if (ctx === null) {
-    throw new Error("Canvas is not available");
-  }
-  const sound = createSound();
-  loadSprites();
-  const keys = new Set<string>();
-  let lastMouseMove = -10;
-  let movie: { scenes: Scene[]; i: number; t: number; done: () => void } | null = null;
-  const mouse = { x: W * 0.7, y: H * 0.5, left: false, right: false };
-
-  const g = {
-    phase: "title" as Phase,
-    mode: "story" as Mode,
-    stage: 0,
-    wave: 0,
-    time: 0,
-    score: 0,
-    kills: 0,
-    combo: 0,
-    comboT: 0,
-    ult: 0,
-    hitstop: 0,
-    shake: 0,
-    active: 0,
-    swing: 0,
-    invuln: 0,
-    spin: 0,
-    swapT: 0,
-    px: W / 2,
-    py: H / 2 + 60,
-    aim: 0,
-    hitCount: 0,
-    banner: { text: "", sub: "", t: 0 },
-    bark: { text: "", t: 0, who: 0 },
-    cuts: [] as { idx: number; text: string }[],
-    cutT: 0,
-    stageClearT: 0,
-    queue: [] as EnemyKind[],
-    spawnT: 0,
-    decor: makeDecor() as Decor[],
-    lastEnemyName: "",
-    dashT: 0,
-    dashCd: 0,
-    dx: 1,
-    dy: 0,
-    chain: 0,
-    chainT: 0,
-    zoom: 0,
-    flashT: 0,
-    flashColor: "#fff",
-    moving: 0,
-  };
-  let heroes: HeroState[] = [];
-  let enemies: Enemy[] = [];
-  let shots: Shot[] = [];
-  let zones: Zone[] = [];
-  let parts: Particle[] = [];
-  let floats: Float[] = [];
-  let slashes: Slash[] = [];
-  let rings: { x: number; y: number; r: number; max: number; life: number; color: string }[] = [];
-  let pickups: { x: number; y: number; t: number }[] = [];
-  const embers = Array.from({ length: 40 }, () => ({ x: Math.random() * W, y: Math.random() * H, s: 0.5 + Math.random() * 1.5, p: Math.random() * 6 }));
-  let raf = 0;
-  let last = performance.now();
-
-  const summary = (): Summary => ({
-    score: Math.floor(g.score),
-    kills: g.kills,
-    stage: g.stage,
-    wave: g.wave,
-    mode: g.mode,
-  });
-
-  const setPhase = (phase: Phase) => {
-    g.phase = phase;
-    bookOpen = false;
-    if (phase !== "playing" && phase !== "paused") {
-      g.shake = 0;
-      g.zoom = 0;
-      g.flashT = 0;
-    }
-    onPhase(phase, summary());
-  };
-
-  const say = (who: number, text: string) => {
-    g.bark = { text, t: 2.2, who };
-  };
-
-  const burst = (x: number, y: number, color: string, n: number, speed = 200) => {
-    for (let i = 0; i < n; i += 1) {
-      const a = Math.random() * TAU;
-      const v = speed * (0.3 + Math.random() * 0.8);
-      parts.push({
-        x,
-        y,
-        vx: Math.cos(a) * v,
-        vy: Math.sin(a) * v,
-        life: 0.5 + Math.random() * 0.4,
-        max: 0.9,
-        color,
-        size: 2 + Math.random() * 4,
-      });
-    }
-  };
-
-  const ring = (x: number, y: number, max: number, color: string, life = 0.45) => {
-    rings.push({ x, y, r: 0, max, life, color });
-  };
-
-  const discovered = new Set<string>();
-  let bookOpen = false;
-  let toast: { name: string; tip: string; t: number } | null = null;
-  const discover = (kind: EnemyKind) => {
-    const lore = loreFor(kind);
-    if (lore === undefined || discovered.has(lore.kind)) return;
-    discovered.add(lore.kind);
-    toast = { name: lore.name, tip: lore.tip, t: 5.5 };
-    g.ult = Math.min(100, g.ult + 15);
-    g.score += 50;
-    sound.tone(660, "sine", 0.25, 0.1, 400);
-  };
-  const spawnEnemy = (kind: EnemyKind, x: number, y: number) => {
-    discover(kind);
-    const def = ENEMY[kind];
-    const boss = BOSSES.includes(kind);
-    enemies.push({
-      kind,
-      x,
-      y,
-      hp: def.hp,
-      max: def.hp,
-      r: def.r,
-      kx: 0,
-      ky: 0,
-      freeze: 0,
-      fear: 0,
-      flash: 0,
-      atk: 0.5,
-      t1: 1.5 + Math.random(),
-      t2: 4,
-      state: 0,
-      phase: 0,
-      boss,
-    });
-  };
-
-  const edgeSpawn = (kind: EnemyKind) => {
-    const side = Math.floor(Math.random() * 4);
-    const x = side === 0 ? PAD : side === 1 ? W - PAD : PAD + Math.random() * (W - PAD * 2);
-    const y = side === 2 ? PAD : side === 3 ? H - PAD : PAD + Math.random() * (H - PAD * 2);
-    spawnEnemy(kind, x, y);
-    burst(x, y, "#b07aff", 10, 120);
-  };
-
-  const clampPlayer = () => {
-    g.px = Math.min(W - PAD, Math.max(PAD, g.px));
-    g.py = Math.min(H - PAD, Math.max(PAD, g.py));
-  };
-
-  const heal = (idx: number, amount: number) => {
-    const h = heroes[idx];
-    if (h !== undefined && h.hp > 0) {
-      h.hp = Math.min(100, h.hp + amount);
-    }
-  };
-
-  const killEnemy = (e: Enemy) => {
-    enemies = enemies.filter((o) => o !== e);
-    g.kills += 1;
-    g.combo += 1;
-    g.comboT = 2.5;
-    g.score += ENEMY[e.kind].score * (1 + Math.min(g.combo, 40) * 0.05);
-    burst(e.x, e.y, e.kind === "slime" || e.kind === "minislime" ? "#7ee03a" : "#ffd36a", e.boss ? 60 : 16);
-    g.hitstop = Math.max(g.hitstop, e.boss ? 0.25 : 0.05);
-    g.shake = Math.max(g.shake, e.boss ? 18 : 5);
-    sound.tone(180, "square", 0.18, 0.12, -120);
-    ring(e.x, e.y, e.r * 2.6, e.boss ? "#ffd36a" : "#ffffff", e.boss ? 0.8 : 0.35);
-    g.zoom = Math.max(g.zoom, e.boss ? 0.08 : 0.015);
-    if (e.boss) {
-      g.flashT = 0.35;
-      g.flashColor = "#ffe9a0";
-    }
-    if (Math.random() < (e.boss ? 1 : 0.14)) {
-      pickups.push({ x: e.x, y: e.y, t: 0 });
-    }
-    if (e.kind === "slime") {
-      spawnEnemy("minislime", e.x - 14, e.y);
-      spawnEnemy("minislime", e.x + 14, e.y);
-    }
-    if (g.combo === 8 || g.combo === 20) {
-      say(g.active, g.combo === 8 ? "Combo!" : "Mayhem!");
-    }
-  };
-
-  const hurtEnemy = (e: Enemy, dmg: number, fromX: number, fromY: number, knock: number) => {
-    if (!enemies.includes(e)) {
-      return;
-    }
-    e.hp -= dmg;
-    e.flash = 0.1;
-    const a = Math.atan2(e.y - fromY, e.x - fromX);
-    const k = e.boss ? knock * 0.15 : knock;
-    e.kx += Math.cos(a) * k;
-    e.ky += Math.sin(a) * k;
-    g.ult = Math.min(100, g.ult + dmg * 0.18);
-    floats.push({ x: e.x, y: e.y - e.r, text: String(Math.round(dmg)), life: 0.7, color: "#fff7b0" });
-    burst(e.x, e.y, "#fff", 4, 140);
-    burst(e.x, e.y, "#ffd36a", 3, 260);
-    g.zoom = Math.max(g.zoom, 0.01);
-    if (dmg >= 25) {
-      g.hitstop = Math.max(g.hitstop, 0.06);
-      g.shake = Math.max(g.shake, 6);
-    }
-    g.hitCount += 1;
-    if (e.hp <= 0) {
-      killEnemy(e);
-    }
-  };
-
-  const allDead = () => heroes.every((h) => h.hp <= 0);
-
-  const hurtPlayer = (dmg: number) => {
-    if (g.invuln > 0 || g.spin > 0 || g.phase !== "playing") {
-      return;
-    }
-    const h = heroes[g.active];
-    if (h === undefined) {
-      return;
-    }
-    h.hp = Math.max(0, h.hp - dmg);
-    g.invuln = 0.45;
-    g.shake = Math.max(g.shake, 9);
-    g.combo = 0;
-    burst(g.px, g.py, "#ff4a4a", 8, 160);
-    floats.push({ x: g.px, y: g.py - 26, text: `-${Math.round(dmg)}`, life: 0.7, color: "#ff6a6a" });
-    sound.tone(120, "sawtooth", 0.2, 0.15, -60);
-    if (h.hp <= 0) {
-      if (allDead()) {
-        sound.music(false);
-        setPhase("over");
-        return;
-      }
-      const next = heroes.findIndex((o) => o.hp > 0);
-      g.active = next;
-      g.swapT = 0.5;
-      say(next, "I got this!");
-    }
-  };
-
-  const swapTo = (idx: number) => {
-    const h = heroes[idx];
-    if (h === undefined || h.hp <= 0 || idx === g.active) {
-      return;
-    }
-    g.active = idx;
-    g.invuln = Math.max(g.invuln, 0.5);
-    g.swapT = 0.35;
-    burst(g.px, g.py, HEROES[idx]?.color ?? "#fff", 14, 160);
-    sound.tone(520, "triangle", 0.15, 0.12, 400);
-    say(idx, HEROES[idx]?.barks[0] ?? "");
-  };
-
-    const primary = () => {
-    const def = HEROES[g.active];
-    const h = heroes[g.active];
-    if (def === undefined || h === undefined || h.cdPrimary > 0) {
-      return;
-    }
-    h.cdPrimary = def.primaryCd;
-    const a = g.aim;
-    g.swing = 1;
-    if (g.active === 2) {
-      const speed = 560;
-      shots.push({
-        x: g.px + Math.cos(a) * 20,
-        y: g.py + Math.sin(a) * 20,
-        vx: Math.cos(a) * speed,
-        vy: Math.sin(a) * speed,
-        r: 9,
-        dmg: 15,
-        friendly: true,
-        life: 1.1,
-        kind: "bolt",
-        bounces: 0,
-      });
-      sound.tone(700, "sine", 0.15, 0.1, -300);
-      return;
-    }
-    const heavy = g.active === 1;
-    g.chain = g.chainT > 0 ? (g.chain + 1) % 3 : 0;
-    g.chainT = 0.7;
-    const finisher = g.chain === 2;
-    const range = (heavy ? 78 : 105) * (finisher ? 1.3 : 1);
-    const arc = (heavy ? 1.3 : 1.0) * (finisher ? 1.5 : 1);
-    const dmg = (heavy ? 26 : 18) * (finisher ? 1.7 : 1);
-    g.px += Math.cos(a) * (finisher ? 34 : 14);
-    g.py += Math.sin(a) * (finisher ? 34 : 14);
-    clampPlayer();
-    if (finisher) {
-      ring(g.px, g.py, range, "#ffffff", 0.3);
-      g.shake = Math.max(g.shake, 7);
-    }
-    slashes.push({ x: g.px, y: g.py, ang: a + (g.chain === 1 ? 0.25 : 0), arc, range, life: finisher ? 0.28 : 0.18, color: heavy ? "#ffd0e0" : "#d6c4ff" });
-    sound.noise(0.12, 0.12);
-    sound.tone(heavy ? 150 : 300, "square", 0.1, 0.07, -80);
-    for (const e of [...enemies]) {
-      const d = Math.hypot(e.x - g.px, e.y - g.py);
-      if (d > range + e.r) {
-        continue;
-      }
-      let diff = Math.atan2(e.y - g.py, e.x - g.px) - a;
-      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      if (Math.abs(diff) <= arc || d < e.r + 20) {
-        hurtEnemy(e, dmg, g.px, g.py, heavy ? 520 : 380);
-      }
-    }
-  };
-
-  const skill = () => {
-    const def = HEROES[g.active];
-    const h = heroes[g.active];
-    if (def === undefined || h === undefined || h.cdSkill > 0) {
-      return;
-    }
-    h.cdSkill = def.skillCd;
-    const a = g.aim;
-    if (g.active === 0) {
-      const d = Math.min(260, Math.hypot(mouse.x - g.px, mouse.y - g.py));
-      zones.push({
-        kind: "rift",
-        x: g.px + Math.cos(a) * d,
-        y: g.py + Math.sin(a) * d,
-        r: 120,
-        t: 0,
-        dur: 3,
-        ang: 0,
-        dealt: false,
-        tick: 0,
-      });
-      sound.tone(90, "sawtooth", 0.6, 0.15, 60);
-    } else if (g.active === 1) {
-      shots.push({
-        x: g.px,
-        y: g.py,
-        vx: Math.cos(a) * 400,
-        vy: Math.sin(a) * 400,
-        r: 12,
-        dmg: 0,
-        friendly: true,
-        life: 2.2,
-        kind: "pie",
-        bounces: 2,
-      });
-      sound.tone(400, "square", 0.15, 0.1, 200);
-    } else {
-      // Dread Stare: lock eyes with the foe nearest your aim. Bosses are too big to freeze.
-      let tgt: Enemy | null = null;
-      let best = Infinity;
-      for (const e of enemies) {
-        const d = Math.hypot(e.x - g.px, e.y - g.py);
-        const off = Math.abs(Math.atan2(Math.sin(Math.atan2(e.y - g.py, e.x - g.px) - a), Math.cos(Math.atan2(e.y - g.py, e.x - g.px) - a)));
-        const score = d + off * 260;
-        if (d < 520 && off < 0.9 && score < best) {
-          best = score;
-          tgt = e;
-        }
-      }
-      if (tgt !== null) {
-        if (!tgt.boss) tgt.freeze = 3;
-        tgt.flash = 0.1;
-        hurtEnemy(tgt, 20, g.px, g.py, 0);
-        ring(tgt.x, tgt.y, 60, "#9fe3ff", 0.5);
-        burst(tgt.x, tgt.y, "#9fe3ff", 24, 220);
-      }
-      g.shake = Math.max(g.shake, 8);
-      sound.tone(900, "sine", 0.5, 0.12, -600);
-    }
-  };
-
-  const ultimate = () => {
-    if (g.ult < 100) {
-      return;
-    }
-    g.ult = 0;
-    const idx = g.active;
-    say(idx, HEROES[idx]?.ultName ?? "");
-    g.shake = 26;
-    g.hitstop = 0.12;
-    g.zoom = 0.1;
-    g.flashT = 0.3;
-    g.flashColor = HEROES[idx]?.color ?? "#fff";
-    ring(g.px, g.py, 520, HEROES[idx]?.color ?? "#fff", 0.7);
-    ring(g.px, g.py, 380, "#ffffff", 0.5);
-    sound.noise(0.8, 0.25);
-    sound.tone(70, "sawtooth", 0.9, 0.2, 40);
-    burst(g.px, g.py, HEROES[idx]?.color ?? "#fff", 60, 500);
-    if (idx === 1) {
-      g.spin = 4;
-      return;
-    }
-    if (idx === 2) {
-      // Forbidden Smile: everyone flees and takes psychic damage over time (see updateEnemy).
-      for (const e of enemies) e.fear = e.boss ? 3 : 6;
-    } else {
-      for (const e of [...enemies]) hurtEnemy(e, 90, g.px, g.py, 300);
-    }
-    if (idx === 2) {
-      heroes.forEach((_, i) => heal(i, 25));
-    }
-  };
-
-  const startStage = (stage: number) => {
-    g.stage = stage;
-    g.wave = 0;
-    g.decor = makeDecor();
-    enemies = [];
-    shots = [];
-    zones = [];
-    g.queue = [];
-    g.banner = { text: STAGE_NAMES[stage] ?? "Endless Mayhem", sub: "Stage " + (stage + 1), t: 2.6 };
-    g.cuts = [];
-    g.cutT = 3;
-    if (g.mode === "story") {
-      const lines = STAGE_CUTS[stage] ?? [];
-      g.cuts = lines.map(([idx, text]) => ({ idx, text }));
-    }
-  };
-
-  const nextWave = () => {
-    g.wave += 1;
-    g.spawnT = 0.8;
-    if (g.mode === "story") {
-      if (g.wave <= 3) {
-        g.queue = makeWave("story", g.stage, g.wave - 1);
-        g.banner = { text: `Wave ${g.wave}`, sub: STAGE_NAMES[g.stage] ?? "", t: 1.6 };
-      } else {
-        const boss = BOSSES[g.stage] ?? "boogeyman";
-        g.queue = [boss];
-        g.banner = { text: ENEMY[boss].name, sub: "Boss fight", t: 2.4 };
-        const [bi, bt] = BOSS_CUTS[g.stage] ?? BOSS_CUTS[0] ?? [0, ""];
-        g.cuts = [{ idx: bi, text: bt }];
-        g.cutT = 3;
-      }
-    } else if (g.wave % 6 === 0) {
-      const boss = BOSSES[(g.wave / 6 - 1) % 3] ?? "boogeyman";
-      g.queue = [boss];
-      g.banner = { text: ENEMY[boss].name, sub: `Wave ${g.wave}`, t: 2.4 };
-    } else {
-      g.queue = makeWave("endless", 0, g.wave);
-      g.banner = { text: `Wave ${g.wave}`, sub: "Endless mayhem", t: 1.6 };
-    }
-  };
-
-  const playMovie = (scenes: Scene[], done: () => void) => {
-    movie = { scenes, i: 0, t: 0, done };
-    mv.act.clear();
-    mv.camX = 0;
-    mv.zoom = 1;
-    mv.last = g.time;
-    keys.clear();
-    mouse.left = false;
-    mouse.right = false;
-    playVoice(scenes[0]?.voice);
-  };
-  let voice: HTMLAudioElement | null = null;
-  const stopVoice = () => {
-    voice?.pause();
-    voice = null;
-  };
-  const playVoice = (name: string | undefined) => {
-    stopVoice();
-    if (name === undefined || muteState.on) return;
-    try {
-      voice = new Audio(new URL(`../assets/${name}.mp3`, import.meta.url).href);
-      voice.volume = 0.95;
-      void voice.play().catch(() => {});
-    } catch {
-      voice = null;
-    }
-  };
-  const advanceMovie = () => {
-    if (movie === null) return;
-    const full = (movie.scenes[movie.i]?.text.length ?? 0) / 40;
-    if (movie.t < full) {
-      movie.t = full;
-      return;
-    }
-    movie.i += 1;
-    movie.t = 0;
-    if (movie.i >= movie.scenes.length) endMovie();
-    else playVoice(movie.scenes[movie.i]?.voice);
   };
   const endMovie = () => {
-    stopVoice();
     const m = movie;
     movie = null;
     last = performance.now();
@@ -1946,7 +1206,8 @@ export function createBrawl(
     updateZones(dt);
     for (const p of parts) {
       p.x += p.vx * dt;
-      p.y += p.vy * dt;      p.vx *= 0.94;
+      p.y += p.vy * dt;
+      p.vx *= 0.94;
       p.vy *= 0.94;
       p.life -= dt;
     }
@@ -2356,3 +1617,403 @@ export function createBrawl(
     }
     if (g.zoom > 0) {
       ctx.translate(W / 2, H / 2);
+      ctx.scale(1 + g.zoom, 1 + g.zoom);
+      ctx.translate(-W / 2, -H / 2);
+    }
+    drawBackground(ctx, g.stage, g.decor, g.time);
+    ctx.fillStyle = "rgba(255,255,255,0.5)";
+    for (const m of embers) {
+      ctx.globalAlpha = 0.25 + 0.25 * Math.sin(g.time * 2 + m.p);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.s, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (g.phase === "title") {
+      const bob = Math.sin(g.time * 2) * 4;
+      drawFigure(ctx, 0, 120, 300 + bob, 1.5, 0.3, true, false, g.time);
+      drawFigure(ctx, 2, 840, 300 - bob, 1.5, Math.PI - 0.3, true, Math.sin(g.time * 1.3) > 0.96, g.time);
+      drawFigure(ctx, 1, 760, 430 + bob, 1.0, Math.PI - 0.3, false, false, g.time);
+      ctx.restore();
+      drawVignette();
+      return;
+    }
+    drawZones();
+    for (const k of pickups) {
+      ctx.save();
+      ctx.translate(k.x, k.y + Math.sin(g.time * 6 + k.x) * 3);
+      ctx.shadowColor = "#5be07a";
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = "#5be07a";
+      ctx.strokeStyle = "#0a0612";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 9, 0, TAU);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(-1.5, -5, 3, 10);
+      ctx.fillRect(-5, -1.5, 10, 3);
+      ctx.restore();
+    }
+    // Characters sorted by depth.
+    type Item = { y: number; draw: () => void };
+    const items: Item[] = enemies.map((e) => ({
+      y: e.y,
+      draw: () => {
+        drawShadow(ctx, e.x, e.y, e.r);
+        const windup = e.kind === "ghoul" && e.state === 1 ? 1 : e.kind === "bat" && e.state === 1 ? 1 : 0;
+        drawEnemy(
+          ctx,
+          e.kind,
+          e.x,
+          e.y,
+          e.r,
+          g.time,
+          Math.atan2(g.py - e.y, g.px - e.x),
+          e.flash > 0,
+          e.freeze > 0,
+          windup,
+          e,
+        );
+        if (e.kind === "ghoul" && e.state === 1) {
+          ctx.strokeStyle = "rgba(255,70,70,0.7)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(e.x, e.y, 100, 0, TAU);
+          ctx.stroke();
+        }
+        if (!e.boss && e.hp < e.max) {
+          ctx.fillStyle = "#222";
+          ctx.fillRect(e.x - 16, e.y - e.r - 14, 32, 4);
+          ctx.fillStyle = "#e0453a";
+          ctx.fillRect(e.x - 16, e.y - e.r - 14, 32 * (e.hp / e.max), 4);
+        }
+      },
+    }));
+    items.push({
+      y: g.py,
+      draw: () => {
+        drawShadow(ctx, g.px, g.py, 16);
+        const sq = g.dashT > 0 ? 1.25 : 1 + g.moving * Math.sin(g.time * 18) * 0.04;
+        ctx.save();
+        ctx.translate(g.px, g.py + 18);
+        ctx.scale(g.dashT > 0 ? 1.3 : 1 / sq, sq);
+        ctx.translate(-g.px, -g.py - 18);
+        drawHero(
+          ctx,
+          g.active,
+          g.px,
+          g.py,
+          g.aim,
+          g.time,
+          g.invuln > 0 && Math.floor(g.time * 20) % 2 === 0,
+          g.spin > 0,
+          g.swing,
+          g,
+        );
+        ctx.restore();
+      },
+    });
+    items.sort((a, b) => a.y - b.y).forEach((i) => i.draw());
+    for (const s of slashes) {
+      ctx.strokeStyle = s.color;
+      ctx.shadowColor = s.color;
+      ctx.shadowBlur = 20;
+      ctx.globalAlpha = Math.min(1, s.life / 0.15);
+      ctx.lineCap = "round";
+      ctx.lineWidth = 6 + s.life * 70;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.range * 0.8, s.ang - s.arc, s.ang + s.arc);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      ctx.lineCap = "butt";
+    }
+    drawShots();
+    ctx.globalCompositeOperation = "lighter";
+    for (const p of parts) {
+      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, (p.size / 2) * (0.5 + p.life / p.max), 0, TAU);
+      ctx.fill();
+    }
+    for (const r of rings) {
+      ctx.globalAlpha = Math.max(0, r.life * 2);
+      ctx.strokeStyle = r.color;
+      ctx.lineWidth = 6 * Math.max(0.2, 1 - r.r / (r.max * 1.6));
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, r.r, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    ctx.font = "bold 16px Trebuchet MS, sans-serif";
+    ctx.textAlign = "center";
+    for (const f of floats) {
+      ctx.globalAlpha = Math.min(1, f.life * 2);
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.text, f.x, f.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    if (g.flashT > 0) {
+      ctx.globalAlpha = Math.min(0.4, g.flashT);
+      ctx.fillStyle = g.flashColor;
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+    drawVignette();
+    const hp = heroes[g.active]?.hp ?? 100;
+    if (hp < 30) {
+      const pulse = 0.12 + 0.08 * Math.sin(g.time * 8);
+      const grd = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, W * 0.6);
+      grd.addColorStop(0, "rgba(255,0,0,0)");
+      grd.addColorStop(1, `rgba(255,0,0,${pulse * 3})`);
+      ctx.fillStyle = grd;
+      ctx.fillRect(0, 0, W, H);
+    }
+    drawHud();
+    if (g.phase === "paused") {
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (movie !== null) drawMovie(movie.scenes[movie.i], movie.i, movie.scenes.length, movie.t);
+  };
+
+  const mv = { last: 0, camX: 0, zoom: 1, act: new Map<number, { x: number; y: number; s: number; lean: number; kick: number }>() };
+  const drawMovie = (sc: Scene | undefined, i: number, n: number, t: number) => {
+    if (sc === undefined) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#07030f";
+    ctx.fillRect(0, 0, W, H);
+    // --- Smooth cinematic camera: eases toward the speaker instead of cutting.
+    const now = g.time;
+    const md = Math.min(0.05, Math.max(0, now - mv.last));
+    mv.last = now;
+    const ease = (k: number) => 1 - Math.exp(-md * k);
+    const speaker = sc.actors.find((a) => a.idx === sc.who);
+    const focusX = speaker?.x ?? W / 2;
+    mv.camX += ((W / 2 - focusX) * 0.12 - mv.camX) * ease(1.6);
+    mv.zoom += (1.03 + Math.min(t, 8) * 0.01 + (speaker !== undefined ? 0.03 : 0) - mv.zoom) * ease(1.2);
+    ctx.translate(W / 2 + mv.camX, H / 2);
+    ctx.scale(mv.zoom, mv.zoom);
+    ctx.translate(-W / 2, -H / 2);
+    drawBackground(ctx, sc.stage, g.decor, g.time);
+    ctx.fillStyle = sc.tint;
+    ctx.fillRect(-60, -60, W + 120, H + 120);
+    // Actors keep their own position between scenes and walk to their marks.
+    for (const a of sc.actors) {
+      let st = mv.act.get(a.idx);
+      if (st === undefined) {
+        st = { x: a.x < W / 2 ? -140 : W + 140, y: 0, s: a.s, lean: 0, kick: 0 };
+        mv.act.set(a.idx, st);
+      }
+    }
+    const order = [...mv.act.entries()].sort((p, q) => (p[1].s - q[1].s));
+    for (const [idx, st] of order) {
+      const a = sc.actors.find((q) => q.idx === idx);
+      const off = st.x < -100 || st.x > W + 100;
+      let tx: number;
+      let ts: number;
+      if (a === undefined) {
+        tx = st.x < W / 2 ? -160 : W + 160;
+        ts = st.s;
+      } else {
+        const talking = a.idx === sc.who;
+        // Speaker steps forward a touch, listeners step back.
+        tx = a.x + (talking && sc.actors.length > 1 ? (a.face === 1 ? 24 : -24) : 0);
+        ts = a.s * (talking ? 1.08 : sc.actors.length > 1 ? 0.96 : 1);
+      }
+      st.x += (tx - st.x) * ease(2.6);
+      st.s += (ts - st.s) * ease(3);
+      if (a === undefined && off) continue;
+      const m = motionOf(st, st.x, 0, now);
+      // Listeners react when a new line starts.
+      if (a !== undefined && a.idx !== sc.who && t < 0.5) st.kick = Math.max(st.kick, 1 - t * 2);
+      st.kick *= Math.exp(-md * 2);
+      const talking = a !== undefined && a.idx === sc.who;
+      const speed = Math.abs(tx - st.x) * 2.6;
+      const walking = speed > 25;
+      const wob = Math.sin(m.phase * TAU * 2);
+      const celebrate = a?.hop === true ? Math.abs(Math.sin(now * 5 + idx)) : 0;
+      const talkBob = talking && !walking ? Math.sin(now * 7) * 2 + Math.max(0, Math.sin(now * 3.1)) * -4 : 0;
+      const dir = a !== undefined ? a.face : (tx > st.x ? 1 : -1);
+      const lean = (walking ? Math.sign(tx - st.x) * 0.1 : dir * 0.04 * (talking ? 2 : 1)) + (celebrate > 0 ? Math.sin(now * 5 + idx) * 0.08 : 0);
+      st.lean += (lean - st.lean) * ease(8);
+      const y = 250 - celebrate * 36 - st.kick * 8 - Math.abs(wob) * (walking ? 7 : 0) + talkBob;
+      const sq = 1 + (celebrate > 0.7 ? 0.05 : 0) - st.kick * 0.04;
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.beginPath();
+      const sh = 1 - celebrate * 0.2;
+      ctx.ellipse(st.x, 250 + 70 * st.s * 0.68, 40 * st.s * 0.68 * sh, 9 * st.s * 0.68 * sh, 0, 0, TAU);
+      ctx.fill();
+      ctx.save();
+      ctx.translate(st.x, 250 + 70 * st.s * 0.68);
+      ctx.rotate(st.lean);
+      ctx.scale(1 / sq, sq);
+      ctx.translate(0, -(250 + 70 * st.s * 0.68));
+      drawFigure(ctx, idx, 0, y, st.s * 0.68, dir === 1 ? 0 : Math.PI, idx !== 1, Math.sin(now * 1.3 + idx) > 0.96, now, walking ? { speed: 100, phase: m.phase } : undefined);
+      ctx.restore();
+    }
+    // Soft dip in at the start of each line.
+    if (t < 0.3) {
+      ctx.fillStyle = `rgba(5,2,10,${0.35 * (1 - t / 0.3)})`;
+      ctx.fillRect(-60, -60, W + 120, H + 120);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    // Letterbox bars.
+    ctx.fillStyle = "#050208";
+    ctx.fillRect(0, 0, W, 54);
+    ctx.fillRect(0, H - 150, W, 150);
+    if (sc.caption !== undefined) {
+      ctx.fillStyle = "#ffd36a";
+      ctx.font = "bold 26px Impact, Trebuchet MS, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(sc.caption, W / 2, 36);
+    }
+    const def = sc.who >= 0 ? HEROES[sc.who] : undefined;
+    ctx.textAlign = "left";
+    ctx.fillStyle = def?.color ?? "#cbb8ff";
+    ctx.font = "bold 20px Trebuchet MS, sans-serif";
+    ctx.fillText(def?.name ?? "Narrator", 60, H - 112);
+    ctx.fillStyle = "#fff";
+    ctx.font = "22px Trebuchet MS, sans-serif";
+    const shown = sc.text.slice(0, Math.floor(t * 40));
+    const words = shown.split(" ");
+    let line = "";
+    let y = H - 80;
+    for (const w of words) {
+      if (ctx.measureText(line + w).width > W - 120) {
+        ctx.fillText(line, 60, y);
+        line = "";
+        y += 28;
+      }
+      line += w + " ";
+    }
+    ctx.fillText(line, 60, y);
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.font = "13px Trebuchet MS, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(`${i + 1}/${n}   Click / Space: next   Esc: skip`, W - 24, H - 18);
+    ctx.restore();
+  };
+
+  const frame = (now: number) => {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (g.phase !== "paused") {
+      update(dt);
+    }
+    render();
+    raf = requestAnimationFrame(frame);
+  };
+
+  // ---- Input ----
+
+  const toLogical = (event: MouseEvent) => {
+    const rect = canvas.getBoundingClientRect();
+    lastMouseMove = g.time;
+    mouse.x = ((event.clientX - rect.left) / rect.width) * W;
+    mouse.y = ((event.clientY - rect.top) / rect.height) * H;
+  };
+  const muteState = { on: false };
+  const toggle = () => {
+    if (g.phase === "playing") {
+      setPhase("paused");
+    } else if (g.phase === "paused") {
+      last = performance.now();
+      setPhase("playing");
+    }
+  };
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.code === "Space" || event.code.startsWith("Arrow")) {
+      event.preventDefault();
+    }
+    if (movie !== null) {
+      if (event.code === "Escape") endMovie();
+      else if (event.code === "Space" || event.code === "Enter" || event.code === "KeyJ") advanceMovie();
+      return;
+    }
+    keys.add(event.code);
+    if (g.phase !== "playing" && g.phase !== "paused") {
+      return;
+    }
+    if (event.code === "KeyQ") {
+      for (let i = 1; i <= 2; i += 1) {
+        const idx = (g.active + i) % 3;
+        if ((heroes[idx]?.hp ?? 0) > 0) {
+          swapTo(idx);
+          break;
+        }
+      }
+    } else if (event.code === "Digit1") swapTo(0);
+    else if (event.code === "Digit2") swapTo(1);
+    else if (event.code === "Digit3") swapTo(2);
+    else if (event.code === "KeyG" && g.phase === "playing") bookOpen = !bookOpen;
+    else if (event.code === "Escape" && bookOpen) bookOpen = false;
+    else if (event.code === "Escape" || event.code === "KeyP") toggle();
+    else if (event.code === "KeyM") {
+      muteState.on = !muteState.on;
+      sound.setMuted(muteState.on);
+    }
+  };
+  const onKeyUp = (event: KeyboardEvent) => keys.delete(event.code);
+  const onMove = (event: MouseEvent) => toLogical(event);
+  const onDown = (event: MouseEvent) => {
+    toLogical(event);
+    if (movie !== null) {
+      if (event.button === 0) advanceMovie();
+      return;
+    }
+    if (event.button === 0) mouse.left = true;
+    if (event.button === 2) mouse.right = true;
+  };
+  const onUp = (event: MouseEvent) => {
+    if (event.button === 0) mouse.left = false;
+    if (event.button === 2) mouse.right = false;
+  };
+  const onMenu = (event: Event) => event.preventDefault();
+  const onBlur = () => {
+    keys.clear();
+    mouse.left = false;
+    mouse.right = false;
+  };
+
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
+  window.addEventListener("blur", onBlur);
+  canvas.addEventListener("mousemove", onMove);
+  canvas.addEventListener("mousedown", onDown);
+  window.addEventListener("mouseup", onUp);
+  canvas.addEventListener("contextmenu", onMenu);
+  raf = requestAnimationFrame(frame);
+
+  return {
+    start,
+    togglePause: toggle,
+    quit() {
+      sound.music(false);
+      setPhase("title");
+    },
+    setMuted(muted) {
+      muteState.on = muted;
+      sound.setMuted(muted);
+    },
+    destroy() {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("mouseup", onUp);
+      canvas.removeEventListener("mousemove", onMove);
+      canvas.removeEventListener("mousedown", onDown);
+      canvas.removeEventListener("contextmenu", onMenu);
+      sound.close();
+    },
+  };
+}

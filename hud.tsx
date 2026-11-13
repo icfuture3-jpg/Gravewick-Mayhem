@@ -1,19 +1,13 @@
+import type { BoardApi } from "./leaderboard";
 import { HeroPreview } from "./preview";
 import { LORE } from "./brawl/lore";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Row } from "./game";
-import { createBrawl, type Brawl, type Mode, type Phase, type Summary } from "./brawl/engine";
+import { createBrawl, type Brawl, type Mode, type Phase, type Summary } from "./engine";
 
 const STAGE_LABEL = ["Backyard", "Crypts", "Citadel"];
 
 type Screen = Phase | "grimoire" | "board" | "heroes";
-
-export interface BoardApi {
-  submit(mode: Mode, run: { score: number; kills: number; wave: number }): void;
-  view(mode: Mode): void;
-  listen(l: ((mode: Mode, rows: Row[], saved: boolean | null) => void) | null): void;
-  openSignup(): void;
-}
 
 const BESTIARY = LORE.map((l) => [l.name, l.tip] as const);
 
@@ -150,7 +144,7 @@ export function GameHud({ board }: { board: BoardApi }) {
             </svg>
             <button style={btn} onClick={() => begin("story")}>Story campaign</button>
             <button style={btn} onClick={() => begin("endless")}>Endless arena</button>
-            <button style={btn} onClick={() => openBoard("endless")}>Leaderboard</button>
+            <button style={btn} onClick={() => openBoard("endless")}>Local high scores</button>
             <button style={btn} onClick={() => setScreen("grimoire")}>Grimoire</button>
             <button style={btn} onClick={() => setScreen("heroes")}>Meet the heroes</button>
             <div style={{ fontSize: 14, opacity: 0.85, marginTop: 8 }}>
@@ -183,7 +177,7 @@ export function GameHud({ board }: { board: BoardApi }) {
         )}
         {screen === "board" && (
           <div style={{ ...scrim, justifyContent: "flex-start", padding: "20px 40px", gap: 8 }}>
-            <h2 style={{ ...heading, fontSize: 36 }}>Leaderboard</h2>
+            <h2 style={{ ...heading, fontSize: 36 }}>Local high scores</h2>
             <div style={{ display: "flex", gap: 10 }}>
               {(["endless", "story"] as const).map((m) => (
                 <button
@@ -195,6 +189,7 @@ export function GameHud({ board }: { board: BoardApi }) {
                 </button>
               ))}
             </div>
+            <div style={{ fontSize: 14 }}>Saved in this browser only. No account or online leaderboard.</div>
             <BoardTable rows={rows} mode={boardMode} />
             <button style={{ ...btn, minWidth: 160, padding: "6px 20px", fontSize: 16 }} onClick={() => setScreen("title")}>Back</button>
           </div>
@@ -223,11 +218,8 @@ export function GameHud({ board }: { board: BoardApi }) {
             <div style={{ fontSize: 16, opacity: 0.85 }}>
               {info.kills} monsters beaten · {info.mode === "story" ? STAGE_LABEL[info.stage] : `Reached wave ${info.wave}`}
             </div>
-            {saved === false && (
-              <button style={{ ...btn, minWidth: 0, fontSize: 14, padding: "6px 16px" }} onClick={() => board.openSignup()}>
-                Sign up to put your score on the leaderboard
-              </button>
-            )}
+            {saved === false && <div role="status">Browser storage is unavailable. Scores last only for this session.</div>}
+            {saved === true && <div role="status">High scores saved on this device.</div>}
             <BoardTable rows={rows} mode={info.mode} compact />
             <button style={btn} onClick={() => begin(info.mode)}>Play again</button>
             <button style={btn} onClick={() => brawlRef.current?.quit()}>Title</button>
@@ -246,7 +238,7 @@ function BoardTable({ rows, mode, compact = false }: { rows: Row[] | null; mode:
       {shown === null ? (
         <div style={{ padding: 8 }}>Loading…</div>
       ) : shown.length === 0 ? (
-        <div style={{ padding: 8 }}>No scores yet. Be the first!</div>
+        <div style={{ padding: 8 }}>No scores on this device yet. Play a round!</div>
       ) : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
