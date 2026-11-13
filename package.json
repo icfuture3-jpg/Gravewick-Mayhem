@@ -2,34 +2,26 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "checks": "node_modules/.bin/tsrs --singleThreaded --incremental --tsBuildInfoFile \"$TMPDIR/tsrs.tsbuildinfo\" --project tsconfig.json && node node_modules/@trhs/wildwood/cli.js lint",
-    "typecheck": "node_modules/.bin/tsrs --singleThreaded --incremental --tsBuildInfoFile \"$TMPDIR/tsrs.tsbuildinfo\" --project tsconfig.json",
-    "test": "node_modules/.bin/vitest run --pool threads --maxWorkers 1 --testTimeout 15000 --passWithNoTests --fsModuleCachePath \"$TMPDIR/vitest\"",
-    "dev": "node node_modules/@trhs/wildwood/cli.js dev",
-    "build": "node node_modules/@trhs/wildwood/cli.js build",
-    "start": "node node_modules/@trhs/wildwood/cli.js start"
-  },
-  "treehouse": {
-    "platform": "node_modules/@trhs/wildwood/node_modules/@trhs/platform-v2"
+    "dev": "vite --host 0.0.0.0",
+    "build": "bun run typecheck && vite build",
+    "start": "vite preview --host 0.0.0.0",
+    "typecheck": "tsrs --noEmit --project tsconfig.json",
+    "checks": "bun run typecheck && oxlint",
+    "test": "vitest run --pool threads --maxWorkers 1 --testTimeout 15000"
   },
   "dependencies": {
-    "@trhs/wildwood": "94.0.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
     "@types/node": "26.6.6",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@types/three": "0.187.0",
-    "koota": "0.6.6",
-    "lucide-react": "1.61.0",
     "oxlint": "1.93.0",
-    "react": "19.3.1",
-    "react-dom": "19.3.1",
-    "tailwindcss": "4.3.3",
-    "three": "0.187.0",
-    "tiny-invariant": "1.3.3",
-    "tone": "15.1.22",
     "tsrs": "0.23.0-ts7.1.0-beta",
     "vite": "8.3.5",
-    "vitest": "5.1.0",
-    "zod": "4.6.7"
-  }
+    "vitest": "5.1.0"
+  },
+  "packageManager": "bun@1.4.4"
 }

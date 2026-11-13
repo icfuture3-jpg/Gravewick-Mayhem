@@ -1,4 +1,3 @@
-import { defineGame, defineProtocol } from "@trhs/wildwood";
 import { z } from "zod";
 
 export const modeSchema = z.enum(["story", "endless"]);
@@ -19,18 +18,4 @@ export const rowSchema = z.object({
 });
 export type Row = z.infer<typeof rowSchema>;
 
-export const BoardProtocol = defineProtocol("board", {
-  toServer: {
-    submit: z.object({ mode: modeSchema, run: runSchema }),
-    view: z.object({ mode: modeSchema }),
-  },
-  toClient: {
-    board: z.object({
-      mode: modeSchema,
-      rows: z.array(rowSchema),
-      saved: z.boolean().nullable(),
-    }),
-  },
-});
-
-export const game = defineGame({ name: "Gravewick Mayhem", tickRate: 30, protocols: [BoardProtocol] });
+export type Mode = z.infer<typeof modeSchema>;

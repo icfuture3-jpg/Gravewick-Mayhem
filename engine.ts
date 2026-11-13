@@ -15,7 +15,6 @@ import {
 import { createSound } from "./audio";
 import { LORE, loreFor } from "./brawl/lore";
 import { drawFigure } from "./heroes";
-import { loadSprites } from "./sprites";
 import { ENDING, INTRO, type Scene } from "./movie";
 
 export type Mode = "story" | "endless";
@@ -229,7 +228,6 @@ export function createBrawl(
     throw new Error("Canvas is not available");
   }
   const sound = createSound();
-  loadSprites();
   const keys = new Set<string>();
   let lastMouseMove = -10;
   let movie: { scenes: Scene[]; i: number; t: number; done: () => void } | null = null;
@@ -687,23 +685,6 @@ export function createBrawl(
     keys.clear();
     mouse.left = false;
     mouse.right = false;
-    playVoice(scenes[0]?.voice);
-  };
-  let voice: HTMLAudioElement | null = null;
-  const stopVoice = () => {
-    voice?.pause();
-    voice = null;
-  };
-  const playVoice = (name: string | undefined) => {
-    stopVoice();
-    if (name === undefined || muteState.on) return;
-    try {
-      voice = new Audio(new URL(`../assets/${name}.mp3`, import.meta.url).href);
-      voice.volume = 0.95;
-      void voice.play().catch(() => {});
-    } catch {
-      voice = null;
-    }
   };
   const advanceMovie = () => {
     if (movie === null) return;
@@ -715,10 +696,8 @@ export function createBrawl(
     movie.i += 1;
     movie.t = 0;
     if (movie.i >= movie.scenes.length) endMovie();
-    else playVoice(movie.scenes[movie.i]?.voice);
   };
   const endMovie = () => {
-    stopVoice();
     const m = movie;
     movie = null;
     last = performance.now();
@@ -2022,15 +2001,18 @@ export function createBrawl(
       setPhase("title");
     },
     setMuted(muted) {
+      muteState.on = muted;
       sound.setMuted(muted);
     },
     destroy() {
       cancelAnimationFrame(raf);
-      stopVoice();
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("mouseup", onUp);
+      canvas.removeEventListener("mousemove", onMove);
+      canvas.removeEventListener("mousedown", onDown);
+      canvas.removeEventListener("contextmenu", onMenu);
       sound.close();
     },
   };
