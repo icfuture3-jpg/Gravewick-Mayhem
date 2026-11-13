@@ -461,6 +461,7 @@ export function drawFigure(
 ) {
   const sp = sprites[idx];
   if (sp !== null && sp !== undefined) {
+    ctx.save();
     // Baked 3D model frame (same look as "Meet the heroes").
     const idleFrame = sp.frames[Math.floor((((t / sp.dur) % 1) + 1) % 1 * sp.frames.length)] ?? sp.frames[0];
     const wk = sp.walk;
@@ -485,9 +486,10 @@ export function drawFigure(
         ctx.arc(x + Math.cos(ang) * 58 * s, y - 10 * s + Math.sin(ang * 1.3) * 50 * s, 2.2, 0, TAU);
         ctx.fill();
       }
-      ctx.globalAlpha = 1;
+      ctx.restore();
       return;
     }
+    ctx.restore();
   }
   ctx.save();
   ctx.translate(x, y);

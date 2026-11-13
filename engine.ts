@@ -1,3 +1,4 @@
+import { attractPickup, bounceAtWalls } from "./physics";
 import {
   H,
   STAGE_NAMES,
@@ -942,17 +943,8 @@ export function createBrawl(
         }
       };
       if (s.kind === "pie") {
-        if (out && s.bounces > 0) {
-          s.bounces -= 1;
-          if (s.x < 10 || s.x > W - 10) {
-            s.vx *= -1;
-          } else {
-            s.vy *= -1;
-          }
-          s.x = Math.min(W - 10, Math.max(10, s.x));
-          s.y = Math.min(H - 10, Math.max(10, s.y));
-        }
-        if (enemies.some((e) => Math.hypot(e.x - s.x, e.y - s.y) < e.r + s.r) || s.life <= 0 || out) {
+        const exhausted = bounceAtWalls(s, W, H);
+        if (enemies.some((e) => Math.hypot(e.x - s.x, e.y - s.y) < e.r + s.r) || s.life <= 0 || exhausted) {
           explode();
         }
         continue;
@@ -1219,11 +1211,7 @@ export function createBrawl(
     rings = rings.filter((r) => r.life > 0 && r.r < r.max * 1.6);
     for (const k of [...pickups]) {
       k.t += dt;
-      const d = Math.hypot(g.px - k.x, g.py - k.y);
-      if (d < 90) {
-        k.x += ((g.px - k.x) / d) * 260 * dt;
-        k.y += ((g.py - k.y) / d) * 260 * dt;
-      }
+      const d = attractPickup(k, g.px, g.py, dt);
       if (d < 22) {
         pickups = pickups.filter((o) => o !== k);
         heal(g.active, 14);
@@ -1899,7 +1887,6 @@ export function createBrawl(
     ctx.font = "13px Trebuchet MS, sans-serif";
     ctx.textAlign = "right";
     ctx.fillText(`${i + 1}/${n}   Click / Space: next   Esc: skip`, W - 24, H - 18);
-    ctx.restore();
   };
 
   const frame = (now: number) => {
