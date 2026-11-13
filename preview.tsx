@@ -37,7 +37,7 @@ export function HeroPreview({ onBack }: { onBack: () => void }) {
   return (
     <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", background: "radial-gradient(circle at 50% 35%, #3a2470, #0d0818 80%)", color: "#fff" }}>
       <h2 style={{ margin: "14px 0 0", fontFamily: "Impact, sans-serif", fontSize: 36, color: "#ffd36a" }}>Meet the heroes</h2>
-      <canvas ref={canvas} width={960} height={340} aria-label="The three heroes, drawn in the game's canvas art style" style={{ width: "100%", flex: 1, minHeight: 0, objectFit: "contain" }} />
+      <canvas ref={canvas} width={960} height={340} aria-label="The three original animated character models" style={{ width: "100%", flex: 1, minHeight: 0, objectFit: "contain" }} />
       <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
         {CAST.map((h, i) => <button key={h.name} aria-pressed={i === picked} onClick={() => setPicked(i)} style={{ padding: "6px 18px", font: "bold 16px 'Trebuchet MS', sans-serif", color: "#fff", background: i === picked ? h.color : "#30204f", border: `2px solid ${h.color}`, borderRadius: 10, cursor: "pointer" }}>{h.name}</button>)}
       </div>
