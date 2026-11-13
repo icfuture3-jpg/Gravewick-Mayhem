@@ -1,4 +1,4 @@
- from "@trhs/wildwood";
+import { defineGame, defineProtocol } from "@trhs/wildwood";
 import { z } from "zod";
 
 export const modeSchema = z.enum(["story", "endless"]);

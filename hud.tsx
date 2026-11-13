@@ -2,7 +2,7 @@ import { HeroPreview } from "./preview";
 import { LORE } from "./brawl/lore";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import type { Row } from "./game";
-import { createBrawl, type Brawl, type Mode, type Phase, type Summary } from "./brawl/engine";
+import { createBrawl, type Brawl, type Mode, type Phase, type Summary } from "./engine";
 
 const STAGE_LABEL = ["Backyard", "Crypts", "Citadel"];
 
