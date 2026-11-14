@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { drawHero } from "./art";
 import { HERO_ABILITIES, GADGETS } from "./hero-abilities";
 import { SOLO_STORIES, type HeroId } from "./solo-story";
-import { createMini, stepMini, miniBonus, miniPoint, MINI_RULES, type MiniInput, type MiniState } from "./mini-game";
+import { createMini, stepMini, miniBonus, miniPoint, runeAt, showingRune, MINI_RULES, type MiniInput, type MiniState } from "./mini-game";
 
 const button: CSSProperties = {padding: "8px 16px", color: "white", background: "#51317c", border: "2px solid #b392e8", borderRadius: 8, cursor: "pointer", font: "bold 15px Trebuchet MS"};
 export function MiniGame({hero, stage = 0, onComplete, onExit}: {
@@ -15,23 +15,25 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
   const state = useRef(createMini(hero, chapter));
   const [running, setRunning] = useState(false);
   const [version, setVersion] = useState(0);
-  const [view, setView] = useState({time: state.current.time, progress: 0, status: "playing", message: "", show: true, gadget: 0});
-  const actions = useRef<{action?: boolean; skill?: boolean; rune?: number}>({});
+  const [view, setView] = useState({index: 0, time: state.current.time, progress: 0, status: "playing", message: "", show: true, gadget: 0});
+  const actions = useRef<Partial<MiniInput>[]>([]);
+  const aim = useRef({x: 480, y: 180});
+  const queue = (input: Partial<MiniInput>) => {if (running && state.current.status === "playing") actions.current.push({aimX: aim.current.x, aimY: aim.current.y, ...input});};
   useEffect(() => {
     const ctx = canvas.current?.getContext("2d"); if (!ctx) return;
     const keys = new Set<string>();
-    const aim = {x: 480, y: 180};
+
     let raf = 0, last = performance.now(), lastView = 0;
-    const clear = () => {keys.clear(); actions.current = {};};
+    const clear = () => {keys.clear(); actions.current = [];};
     const keydown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLButtonElement && (e.code === "Space" || e.code === "Enter")) return;
       if (e.code === "Space" || e.code.startsWith("Arrow")) e.preventDefault();
       if (!e.repeat) {
-        if (e.code === "KeyK") actions.current.skill = true;
-        if (e.code === "KeyJ") actions.current.action = true;
-        if (e.code === "Space" && hero === 1) actions.current.rune = 4;
+        if (e.code === "KeyK") queue({skill: true});
+        if (e.code === "KeyJ") queue({action: true});
+        if (e.code === "Space" && hero === 1) queue({rune: 4});
         const rune = ["Digit1", "Digit2", "Digit3", "Digit4"].indexOf(e.code);
-        if (rune >= 0) actions.current.rune = rune;
+        if (rune >= 0) queue({rune});
       }
       keys.add(e.code);
     };
@@ -42,22 +44,26 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
       const s = state.current;
       if (running) {
         const input: MiniInput = {x: Number(keys.has("KeyD") || keys.has("ArrowRight")) - Number(keys.has("KeyA") || keys.has("ArrowLeft")),
-          y: Number(keys.has("KeyS") || keys.has("ArrowDown")) - Number(keys.has("KeyW") || keys.has("ArrowUp")), aimX: aim.x, aimY: aim.y, ...actions.current};
+          y: Number(keys.has("KeyS") || keys.has("ArrowDown")) - Number(keys.has("KeyW") || keys.has("ArrowUp")), aimX: aim.current.x, aimY: aim.current.y, ...actions.current.shift()};
         if (hero === 0 && (keys.has("KeyJ") || keys.has("Space"))) input.action = true;
-        stepMini(s, input, dt); actions.current = {};
+        stepMini(s, input, dt);
       }
-      drawMini(ctx, s, aim.x, aim.y);
-      if (now - lastView > 80) {setView({time: s.time, progress: s.progress, status: s.status, message: s.message, show: s.show > 0, gadget: s.gadget}); lastView = now;}
+      drawMini(ctx, s, aim.current.x, aim.current.y);
+      if (now - lastView > 80) {setView({index: s.index, time: s.time, progress: s.progress, status: s.status, message: s.message, show: s.show > 0, gadget: s.gadget}); lastView = now;}
       raf = requestAnimationFrame(draw);
     };
-    const move = (e: MouseEvent) => {const box = canvas.current!.getBoundingClientRect(); Object.assign(aim, miniPoint(box, e.clientX, e.clientY));};
-    const click = (e: MouseEvent) => {move(e); if (hero !== 2) actions.current.action = true;};
+    const move = (e: MouseEvent) => {const box = canvas.current!.getBoundingClientRect(); Object.assign(aim.current, miniPoint(box, e.clientX, e.clientY));};
+    const click = (e: MouseEvent) => {
+      move(e);
+      if (hero === 2) {const rune = runeAt(aim.current.x, aim.current.y); if (rune !== undefined && state.current.show <= 0) queue({rune});}
+      else queue({action: true});
+    };
     window.addEventListener("keydown", keydown); window.addEventListener("keyup", keyup); window.addEventListener("blur", blur);
     const node = canvas.current!; node.addEventListener("mousemove", move); node.addEventListener("click", click);
     raf = requestAnimationFrame(draw);
     return () => {cancelAnimationFrame(raf); clear(); window.removeEventListener("keydown", keydown); window.removeEventListener("keyup", keyup); window.removeEventListener("blur", blur); node.removeEventListener("mousemove", move); node.removeEventListener("click", click);};
   }, [hero, running, version]);
-  const restart = () => {state.current = createMini(hero, chapter); setView({time: state.current.time, progress: 0, status: "playing", message: "", show: true, gadget: 0}); setRunning(false); setVersion((n) => n + 1);};
+  const restart = () => {actions.current = []; aim.current = {x: 480, y: 180}; state.current = createMini(hero, chapter); setView({index: 0, time: state.current.time, progress: 0, status: "playing", message: "", show: true, gadget: 0}); setRunning(false); setVersion((n) => n + 1);};
   return <div style={{position: "absolute", inset: 0, zIndex: 70, background: "#10091e", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 12, boxSizing: "border-box", overflow: "auto"}}>
     <div style={{color: "#ffd36a", fontWeight: "bold"}}>Gravewick Tales</div>
     <h2 style={{margin: 0, color: HERO_ABILITIES[hero].color}}>{HERO_ABILITIES[hero].name} · {SOLO_STORIES[hero].game}</h2>
@@ -68,7 +74,13 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
       {view.status === "won" ? lore.ending : view.message || SOLO_STORIES[hero].intro}
     </div>
     <canvas ref={canvas} width={960} height={480} aria-label={`${SOLO_STORIES[hero].game} playfield`} style={{width: "100%", flex: 1, minHeight: 0, objectFit: "contain", cursor: "crosshair"}} />
-    {hero === 2 && <div style={{display: "flex", gap: 8}}>{["Moon", "Star", "Eye", "Key"].map((name, i) => <button key={name} style={button} disabled={!running || view.show || view.status !== "playing"} onClick={() => {actions.current.rune = i;}}>{i + 1} · {name}</button>)}</div>}
+    <div style={{display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center"}}>
+      {hero === 0 && <><button style={button} disabled={!running || view.status !== "playing"} onClick={() => queue({action: true})}>Shine lantern · J</button><button style={button} disabled={!running || view.status !== "playing"} onClick={() => queue({skill: true})}>Portal to aim · K</button></>}
+      {hero === 1 && <><button style={button} disabled={!running || view.status !== "playing"} onClick={() => queue({skill: true})}>Change gadget · K</button><button style={button} disabled={!running || view.status !== "playing"} onClick={() => queue({action: true})}>Throw at aim · J</button><button style={button} disabled={!running || view.status !== "playing"} onClick={() => queue({rune: 4})}>Shrink · Space</button></>}
+      {hero === 2 && <button style={button} disabled={!running || view.show || view.status !== "playing"} onClick={() => queue({skill: true})}>Replay pattern · K (−5s)</button>}
+    </div>
+    {hero === 2 && <div style={{display: "flex", gap: 8}}>{["Moon", "Star", "Eye", "Key"].map((name, i) => <button key={name} style={button} disabled={!running || view.show || view.status !== "playing"} onClick={() => queue({rune: i})}>{i + 1} · {name}</button>)}</div>}
+    {hero === 2 && <div aria-live="polite">{view.show ? "Watch the pattern — input unlocks after the lights finish" : `Your turn · ${view.index}/${state.current.sequence.length} runes`}</div>}
     <div role="status" style={{minHeight: 18, fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : view.status === "lost" ? "Time's up. Retry this memory, or choose another character." : (hero === 2 ? "Watch the rune lights, then repeat them." : "Ready when you are.")}</div>
     <div style={{display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center"}}>
       {view.status === "playing" && <button style={button} onClick={(event) => {event.currentTarget.blur(); setRunning((v) => !v);}}>{running ? "Pause mini-game" : state.current.elapsed > 0 ? "Resume mini-game" : "Start mini-game"}</button>}
@@ -103,7 +115,7 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     for (const shot of s.shots) {ctx.fillStyle = GADGETS[shot.kind]!.color; ctx.beginPath(); ctx.arc(shot.x, shot.y, 9, 0, Math.PI * 2); ctx.fill();}
   } else {
     for (let i = 0; i < 10; i++) {ctx.fillStyle = "#513d64"; ctx.fillRect(i * 100, 40, 70, 35); ctx.fillStyle = "#9c77b3"; ctx.fillRect(i * 100 + 5, 43, 8, 28);}
-    const active = s.show > 0 ? s.sequence[Math.floor((s.sequence.length * 0.8 + 0.8 - s.show) / 0.8)] : undefined;
+    const active = showingRune(s);
     for (let i = 0; i < 4; i++) {
       ctx.fillStyle = active === i ? "#ffb5ed" : "#46315d"; ctx.strokeStyle = "#b481e8"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.roundRect(170 + i * 170, 100, 140, 130, 15); ctx.fill(); ctx.stroke();

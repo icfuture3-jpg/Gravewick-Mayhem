@@ -66,3 +66,9 @@ Each Tale contains three chapters: an animated backstory scene, a personal mini-
 - **Wisp — Beyond the Mirror / Mirror Memory:** unlock the library spellbook, confront doubtful reflections and write its final page. Watch the rune pattern, then repeat with 1–4 or the rune buttons; K replays at a time cost.
 
 Objectives reveal matching backstory memories during play. Mini-games include Start, pause/resume, blur-pause, timeout and retry. Tales points are session-only and isolated from Mayhem's leaderboard; no mid-Tale save is provided. All characters are unlocked. The personal stories use original backstory text and existing animated models, without new external assets or recorded voices.
+
+## Mini-game browser regression checks
+
+Install Chromium once with `bunx playwright install chromium`. Start the app with `bun run dev --port 5173`, then run `bun run test:browser` in another terminal. The real Chromium playthrough uses normal mouse/keyboard/button inputs through all three chapters for each hero, all endings, replay, pause/resume, timeout/retry and exits. It controls browser time for deterministic animation-frame stepping; it does not edit game state or bypass objectives. Set `GAME_URL` only to a reachable local test server to use another port.
+
+Wisp's large rune tiles and the rune buttons both accept clicks; repeated flashes now have blank gaps. Inputs queue in order instead of overwriting rapid clicks. Her progress text shows how many runes were accepted, and the watch phase explains why rune inputs are temporarily disabled. On-screen lantern/portal, gadget/throw/shrink and pattern-replay buttons mirror the keyboard controls. Pause/resume preserves mouse aim; retry resets it, clears input and resets the current chapter.
