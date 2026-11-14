@@ -6,7 +6,16 @@ const browser = await chromium.launch({headless:true,args:['--no-sandbox','--ena
 const page = await browser.newPage({viewport:{width:1280,height:800}});
 const errors=[]; page.on('pageerror',e=>errors.push(e.message));
 const button = name => page.getByRole('button',{name,exact:true});
-const click = async name => {await button(name).click(); await page.clock.runFor(100);};
+const click = async name => {
+  await button(name).click(); await page.clock.runFor(100);
+  // Import resolution and React's cached native scheduler run in real time, while gameplay
+  // timers use the controlled clock. Let both advance until the lazy view is committed.
+  for (let attempt=0;attempt<100 && (await page.locator('body').innerText()).includes('Opening the next adventure');attempt++) {
+    await new Promise(resolve=>setTimeout(resolve,50));
+    await page.clock.runFor(100);
+  }
+
+};
 const text = async () => page.locator('body').innerText();
 const requireText = async str => assert.ok((await text()).includes(str),`Missing ${str}: ${await text()}`);
 async function move(code, ms) {await page.keyboard.down(code); await page.clock.runFor(ms); await page.keyboard.up(code); await page.clock.runFor(50);}

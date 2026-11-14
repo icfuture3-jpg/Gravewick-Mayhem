@@ -9,6 +9,7 @@ export interface Sound {
   music(playing: boolean): void;
   setMuted(muted: boolean): void;
   close(): void;
+  sample?(kind: "explosion" | "thunder", volume: number): void;
 }
 
 export function createSound(): Sound {
@@ -17,6 +18,14 @@ export function createSound(): Sound {
   let nextBeat = 0;
   let beat = 0;
   let timer = 0;
+  let closed = false;
+  const recordings = new Map<string, HTMLAudioElement>();
+  // Real audio files replace broadband noise for cinematic explosions and thunder.
+  for (const [kind, file] of [["explosion", "explosion.wav"], ["thunder", "thunder.ogg"]]) {
+    const audio = new Audio(`${import.meta.env.BASE_URL}audio/${file}`);
+    audio.preload = "auto";
+    recordings.set(kind!, audio);
+  }
 
   const ensure = (): AudioContext => {
     if (ctx === null) {
@@ -108,6 +117,14 @@ export function createSound(): Sound {
   return {
     tone,
     noise,
+    sample(kind, volume) {
+      if (muted || closed) return;
+      const audio = recordings.get(kind)!;
+      audio.volume = Math.min(1, Math.max(0, volume));
+      audio.currentTime = 0;
+      // No static fallback. Autoplay restrictions are recoverable with a Sound toggle.
+      void audio.play().catch(() => {});
+    },
     music(playing) {
       window.clearInterval(timer);
       if (playing) {
@@ -118,8 +135,12 @@ export function createSound(): Sound {
     },
     setMuted(value) {
       muted = value;
+      for (const audio of recordings.values()) audio.muted = value;
     },
     close() {
+      closed = true;
+      for (const audio of recordings.values()) {audio.pause(); audio.removeAttribute("src"); audio.load();}
+      recordings.clear();
       window.clearInterval(timer);
       if (ctx !== null) {
         void ctx.close();
