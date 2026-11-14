@@ -1,3 +1,4 @@
+import { speakScene, stopVoices, speakLines } from "./voices";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { startTale, advanceTale, taleScenes } from "./tales";
 import { MiniGame } from "./mini-game-view";
@@ -12,6 +13,10 @@ const panel: CSSProperties = {position: "absolute", inset: 0, zIndex: 70, backgr
 export function Tales({hero, onExit}: {hero: HeroId; onExit: () => void}) {
   const [tale, setTale] = useState(() => startTale(hero));
   const title = SOLO_STORIES[hero].title;
+  useEffect(() => {
+    if (tale.phase === "complete") speakLines([{who: -1, text: `${HERO_ABILITIES[hero].name}'s tale complete.`}, {who: hero, text: SOLO_STORIES[hero].ending}]);
+    return stopVoices;
+  }, [hero, tale.phase]);
   if (tale.phase === "game") return <MiniGame key={`${hero}-${tale.chapter}`} hero={hero} stage={tale.chapter}
     onComplete={(bonus) => setTale((current) => advanceTale(current, "win", bonus))} onExit={onExit} />;
   if (tale.phase === "complete") return <div style={panel}>
@@ -33,6 +38,7 @@ function TaleCutscene({scenes, label, nextLabel, onNext, onExit}: {scenes: Scene
   const [picked, setPicked] = useState(0);
   const canvas = useRef<HTMLCanvasElement>(null);
   const scene = scenes[picked]!;
+  useEffect(() => {speakScene(scene); return stopVoices;}, [scene]);
   useEffect(() => {
     const ctx = canvas.current?.getContext("2d"); if (!ctx) return;
     const start = performance.now(); let raf = 0;

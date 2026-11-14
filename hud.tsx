@@ -1,3 +1,4 @@
+import { VoiceControls } from "./voice-controls";
 import { StorySelect } from "./story-select";
 import { Tales } from "./tales-view";
 import { SOLO_STORIES, type HeroId } from "./solo-story";
@@ -134,6 +135,7 @@ export function GameHud({ board }: { board: BoardApi }) {
 
   return (
     <div style={root}>
+      <VoiceControls />
       <div style={stageBox}>
         <canvas
           ref={canvasRef}

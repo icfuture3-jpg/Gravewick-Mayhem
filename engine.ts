@@ -1,3 +1,4 @@
+import { speakScene, stopVoices, muteVoices, voicePlaying } from "./voices";
 import { soloScenes, SOLO_STORIES, type HeroId } from "./solo-story";
 import { HERO_ABILITIES, GADGETS } from "./hero-abilities";
 import type { PracticeOptions } from "./practice";
@@ -694,6 +695,7 @@ export function createBrawl(
 
   const movieSound = (scene: Scene | undefined) => {
     if (scene === undefined) return;
+    speakScene(scene);
     if (scene.action === "gadget" || scene.action === "team") sound.noise(0.3, 0.12);
     sound.tone(scene.action === "victory" ? 660 : scene.action === "portal" ? 180 : 440,
       "triangle", 0.6, 0.1, scene.action === "victory" ? 330 : 120);
@@ -722,6 +724,7 @@ export function createBrawl(
     else movieSound(movie.scenes[movie.i]);
   };
   const endMovie = () => {
+    stopVoices();
     const m = movie;
     movie = null;
     keys.clear();
@@ -1072,7 +1075,7 @@ export function createBrawl(
     if (movie !== null) {
       movie.t += dt;
       const scene = movie.scenes[movie.i];
-      if (scene !== undefined && movie.t >= scene.duration) {
+      if (scene !== undefined && movie.t >= scene.duration && (!voicePlaying() || movie.t > 45)) {
         movie.i += 1;
         movie.t = 0;
         if (movie.i >= movie.scenes.length) endMovie();
@@ -2048,6 +2051,7 @@ export function createBrawl(
     else if (event.code === "KeyM") {
       muteState.on = !muteState.on;
       sound.setMuted(muteState.on);
+      muteVoices(muteState.on);
     }
   };
   const onKeyUp = (event: KeyboardEvent) => keys.delete(event.code);
@@ -2111,16 +2115,19 @@ export function createBrawl(
     },
     togglePause: toggle,
     quit() {
+      stopVoices();
       movie = null;
       keys.clear(); pendingActions.clear();
       sound.music(false);
       setPhase("title");
     },
     setMuted(muted) {
+      muteVoices(muted);
       muteState.on = muted;
       sound.setMuted(muted);
     },
     destroy() {
+      stopVoices();
       cancelAnimationFrame(raf);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
