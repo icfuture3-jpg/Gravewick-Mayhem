@@ -142,7 +142,7 @@ export function GameHud({ board }: { board: BoardApi }) {
                 MAYHEM
               </text>
             </svg>
-            <button style={btn} onClick={() => begin("story")}>Story campaign</button>
+            <button style={btn} onClick={() => begin("story")}>Story + training</button>
             <button style={btn} onClick={() => begin("endless")}>Endless arena</button>
             <button style={btn} onClick={() => openBoard("endless")}>Local high scores</button>
             <button style={btn} onClick={() => setScreen("grimoire")}>Grimoire</button>

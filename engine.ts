@@ -1,3 +1,4 @@
+import { LESSONS, advanceLesson, type TutorialAction } from "./tutorial";
 import { attractPickup, bounceAtWalls } from "./physics";
 import {
   H,
@@ -229,6 +230,9 @@ export function createBrawl(
     throw new Error("Canvas is not available");
   }
   const sound = createSound();
+  let lesson = 0;
+  let tutorial = false;
+  const learn = (action: TutorialAction) => { if (tutorial) lesson = advanceLesson(lesson, action); };
   const keys = new Set<string>();
   let lastMouseMove = -10;
   let movie: { scenes: Scene[]; i: number; t: number; done: () => void } | null = null;
@@ -479,6 +483,7 @@ export function createBrawl(
       return;
     }
     g.active = idx;
+    learn("swap");
     g.invuln = Math.max(g.invuln, 0.5);
     g.swapT = 0.35;
     burst(g.px, g.py, HEROES[idx]?.color ?? "#fff", 14, 160);
@@ -493,6 +498,7 @@ export function createBrawl(
       return;
     }
     h.cdPrimary = def.primaryCd;
+    learn("attack");
     const a = g.aim;
     g.swing = 1;
     if (g.active === 2) {
@@ -549,6 +555,7 @@ export function createBrawl(
       return;
     }
     h.cdSkill = def.skillCd;
+    learn("skill");
     const a = g.aim;
     if (g.active === 0) {
       const d = Math.min(260, Math.hypot(mouse.x - g.px, mouse.y - g.py));
@@ -707,6 +714,8 @@ export function createBrawl(
 
   const start = (mode: Mode) => {
     g.mode = mode;
+    tutorial = mode === "story";
+    lesson = 0;
     g.score = 0;
     g.kills = 0;
     g.combo = 0;
@@ -1038,6 +1047,7 @@ export function createBrawl(
     const len = Math.hypot(mx, my);
     const def = HEROES[g.active];
     g.moving = len > 0 ? 1 : 0;
+    if (len > 0) learn("move");
     if (len > 0) {
       g.dx = mx / len;
       g.dy = my / len;
@@ -1045,6 +1055,7 @@ export function createBrawl(
     g.dashCd -= dt;
     if ((keys.has("ShiftLeft") || keys.has("ShiftRight")) && g.dashCd <= 0 && g.dashT <= 0) {
       g.dashT = 0.17;
+      learn("dash");
       g.dashCd = 0.8;
       g.invuln = Math.max(g.invuln, 0.3);
       sound.noise(0.15, 0.1);
@@ -1123,8 +1134,13 @@ export function createBrawl(
       }
     }
 
+    // Let new players practise before the first story wave.
+    const training = tutorial && lesson < LESSONS.length && g.wave === 0;
+
     // Spawning and waves.
-    if (g.stageClearT > 0) {
+    if (training) {
+      // Effects and projectiles still update while enemy spawning waits.
+    } else if (g.stageClearT > 0) {
       g.stageClearT -= dt;
       if (g.stageClearT <= 0) {
         heroes.forEach((h, i) => {
@@ -1331,6 +1347,21 @@ export function createBrawl(
   };
 
   const drawHud = () => {
+    if (tutorial && lesson < LESSONS.length && movie === null) {
+      ctx.save();
+      ctx.fillStyle = "rgba(10,6,24,0.94)";
+      ctx.fillRect(130, 100, 700, 82);
+      ctx.strokeStyle = "#ffd36a";
+      ctx.strokeRect(130, 100, 700, 82);
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#ffd36a";
+      ctx.font = "bold 16px Trebuchet MS, sans-serif";
+      ctx.fillText(`Training ${lesson + 1}/${LESSONS.length} · T to skip`, W / 2, 125);
+      ctx.fillStyle = "white";
+      ctx.font = "18px Trebuchet MS, sans-serif";
+      ctx.fillText(LESSONS[lesson]!.text, W / 2, 156);
+      ctx.restore();
+    }
     // Hero cards.
     heroes.forEach((h, i) => {
       const def = HEROES[i];
@@ -1651,6 +1682,16 @@ export function createBrawl(
       draw: () => {
         drawShadow(ctx, e.x, e.y, e.r);
         const windup = e.kind === "ghoul" && e.state === 1 ? 1 : e.kind === "bat" && e.state === 1 ? 1 : 0;
+        if ((e.kind === "bat" && e.t1 < 0.4) || (e.boss && e.t1 < 0.65)) {
+          ctx.save();
+          ctx.strokeStyle = "#ffcc66";
+          ctx.lineWidth = 3;
+          ctx.setLineDash([8, 8]);
+          const aim = Math.atan2(g.py - e.y, g.px - e.x);
+          ctx.beginPath(); ctx.moveTo(e.x, e.y);
+          ctx.lineTo(e.x + Math.cos(aim) * 320, e.y + Math.sin(aim) * 320);
+          ctx.stroke(); ctx.restore();
+        }
         drawEnemy(
           ctx,
           e.kind,
@@ -1926,6 +1967,7 @@ export function createBrawl(
       else if (event.code === "Space" || event.code === "Enter" || event.code === "KeyJ") advanceMovie();
       return;
     }
+    if (event.code === "KeyT") lesson = LESSONS.length;
     keys.add(event.code);
     if (g.phase !== "playing" && g.phase !== "paused") {
       return;

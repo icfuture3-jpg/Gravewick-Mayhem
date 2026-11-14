@@ -103,7 +103,7 @@ async function bakeSprites(): Promise<void> {
       return out;
     };
     const frames = renderClip(clip, i < 3 ? FRAMES : 10);
-    const walkClip = gltf.animations.find((c) => c.name === "walk");
+    const walkClip = gltf.animations.find((c) => c.name === "run") ?? gltf.animations.find((c) => c.name === "walk");
     const walk = i < 3 && walkClip !== undefined ? renderClip(walkClip, 16) : undefined;
     scene.remove(root);
     sprites[i] = { frames, aspect, walk, dur: clip?.duration ?? 1, walkDur: walkClip?.duration ?? 1 };

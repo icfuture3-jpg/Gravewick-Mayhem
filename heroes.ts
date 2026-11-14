@@ -471,6 +471,9 @@ export function drawFigure(
     const frame = blend > 0.5 && walkFrame !== undefined ? walkFrame : idleFrame;
     const under = blend > 0 && blend < 1 ? (blend > 0.5 ? idleFrame : walkFrame) : undefined;
     if (frame !== undefined) {
+      ctx.translate(x, 0);
+      if (Math.cos(look) < 0) ctx.scale(-1, 1);
+      ctx.translate(-x, 0);
       const hh = 185 * s;
       if (under !== undefined) {
         ctx.globalAlpha = 1 - Math.abs(blend - 0.5) * 2 + 0.0;
