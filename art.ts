@@ -1,5 +1,6 @@
 // Cartoon canvas drawing: arenas, heroes, and monsters with chunky outlines.
 
+import { CAMPAIGN_LOCATIONS } from "./locations";
 import { drawFigure } from "./heroes";
 import { spriteByName, tinted } from "./sprites";
 
@@ -38,17 +39,8 @@ export function makeDecor(): Decor[] {
   return list;
 }
 
-export const STAGE_NAMES = [
-  "Gravewick Backyard",
-  "Cemetery Crypts",
-  "Underworld Citadel",
-];
-
-const FLOORS: [string, string][] = [
-  ["#1f3a2c", "#10241c"],
-  ["#2a2840", "#15132a"],
-  ["#3a1218", "#1b0509"],
-];
+export const STAGE_NAMES = CAMPAIGN_LOCATIONS.map((location) => location.name);
+const FLOORS = CAMPAIGN_LOCATIONS.map((location) => location.floor);
 
 function blob(
   ctx: CanvasRenderingContext2D,

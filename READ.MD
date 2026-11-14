@@ -78,3 +78,20 @@ Wisp's large rune tiles and the rune buttons both accept clicks; repeated flashe
 Tales uses its own chapter-specific animated story renderer rather than Mayhem's generic attack montage. Grimble catches a falling star's sparks, relights keeper lanterns and opens the star gate; Pip repairs toys, rebuilds a prototype and shrinks beneath a scanner to disable locks; Wisp retrieves a floating spellbook from a mirror, confronts a reflection with doubles and writes a page as the dark mirror becomes starlight. Chapter conclusions show the completed action instead of starting the task over. These are stylized 2D props and choreography around the existing animated character sprites—not new skeletal hand animations or rendered movies. Mayhem cutscenes remain unchanged, and voices remain absent.
 
 During mini-games, revealed sparks gain lantern frames, Pip's targets become toys with wheels and stay visibly repaired/disabled when matched, and Wisp's floating book gains writing with each restored memory. Puzzle rules, controls, timing, difficulty, collision sizes and hit areas are unchanged.
+
+## Runtime ownership
+
+The persistent React shell owns navigation, sound preference and local scores. Mayhem and
+Tales are separate lazy-loaded bundles. Mayhem mounts only for a campaign, endless or practice
+session; its canvas, global input listeners, animation frame and audio context are destroyed
+on exit. Pause/resume keeps the existing session mounted. Sound preference, including the M
+shortcut, survives returning to the menu and starting another run.
+
+Tales retains its own session-only chapter state and keyed mini-game/cutscene cleanup. Campaign
+location names and palettes live in `locations.ts`; combat and transition rules are unchanged.
+Shared baked sprites remain cached for the page lifetime and are still loaded at startup;
+this separation does not yet introduce on-demand character models or mid-Tale saves.
+
+With the local app running, `bun scripts/runtime.browser.mjs` checks lazy runtime loading,
+repeated Mayhem/Tales switches, listener/animation/audio cleanup, mute retention, pause/resume,
+and campaign/practice launches using normal browser inputs.

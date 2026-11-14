@@ -200,6 +200,7 @@ export function makeWave(mode: Mode, stage: number, wave: number): EnemyKind[] {
 export function createBrawl(
   canvas: HTMLCanvasElement,
   onPhase: (phase: Phase, summary: Summary) => void,
+  onMuted?: (muted: boolean) => void,
 ): Brawl {
   const ctx = canvas.getContext("2d");
   if (ctx === null) {
@@ -2048,6 +2049,7 @@ export function createBrawl(
     else if (event.code === "KeyM") {
       muteState.on = !muteState.on;
       sound.setMuted(muteState.on);
+      onMuted?.(muteState.on);
     }
   };
   const onKeyUp = (event: KeyboardEvent) => keys.delete(event.code);
