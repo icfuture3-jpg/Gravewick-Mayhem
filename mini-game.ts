@@ -1,3 +1,4 @@
+import { miniChapter } from "./mini-backstory";
 import type { HeroId } from "./solo-story";
 
 export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; skill?: boolean; rune?: number}
@@ -40,7 +41,7 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
     for (const spark of s.sparks) {
       const d = Math.hypot(s.px - spark.x, s.py - spark.y);
       if (input.action && d < 120) spark.found = true;
-      if (spark.found && !spark.taken && d < 30) {spark.taken = true; s.progress++; s.message = "Lost light rescued!";}
+      if (spark.found && !spark.taken && d < 30) {spark.taken = true; s.progress++; s.message = miniChapter(s.hero, s.stage).memories[s.progress - 1]!;}
     }
     for (let i = 0; i < 3; i++) {
       const x = 180 + i * 270, y = 240 + Math.sin(s.elapsed * 1.5 + i * 2) * 120;
@@ -60,7 +61,7 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
       const target = s.targets.find((t) => !t.hit && Math.hypot(t.x - shot.x, t.y - shot.y) < 30);
       if (target && shot.life > 0) {
         shot.life = 0;
-        if (target.kind === shot.kind) {target.hit = true; s.progress++; s.message = "Perfect gadget match!";}
+        if (target.kind === shot.kind) {target.hit = true; s.progress++; s.message = miniChapter(s.hero, s.stage).memories[s.progress - 1]!;}
         else {s.time -= 2; s.message = "Wrong gadget! Match the target number. −2s";}
       }
     }
@@ -76,6 +77,7 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
         s.index++; s.message = "A true reflection!";
         if (s.index === s.sequence.length) {
           s.progress++; s.index = 0;
+          s.message = miniChapter(s.hero, s.stage).memories[s.progress - 1]!;
           if (s.progress < s.goal) {s.sequence = sequence(s.stage, s.progress); s.show = s.sequence.length * 0.8 + 0.8;}
         }
       } else {s.index = 0; s.time -= 3; s.message = "That was an illusion. Start the pattern again. −3s";}

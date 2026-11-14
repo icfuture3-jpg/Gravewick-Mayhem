@@ -63,3 +63,9 @@ Each hero has a distinct mini-game, available standalone from the same picker an
 - **Wisp — Mirror Memory:** watch lit runes, then reproduce three increasingly long patterns using 1–4 or the rune buttons. K replays the pattern at a time cost. Later chapters change the patterns.
 
 Mini-games wait for Start, offer pause/resume and retry, pause on window blur, and have clear win/timeout results. A story challenge can be skipped without a bonus, so it cannot block campaign progress. Winning adds a time-based bonus once and Continue to battle resumes the selected hero; battles begin with at least 50% ultimate charge. Standalone mini-games can be replayed or exited at any time. Solo scores and mini-game results are session-only and never mix into team/endless high scores. Full solo runs cannot be saved mid-chapter.
+
+### Clickable characters and playable memories
+
+Click any animated character card in the story picker or Meet the Heroes; the model is inside a native keyboard-accessible selection button. Each story-picker card also has its own direct mini-game launch button. Meet the Heroes launches the selected character's mini-game too.
+
+Each mini-game now takes place inside its hero's backstory: Grimble rescues fallen-star sparks and forgotten keeper embers; Pip repairs his market toys and failed prototype before disabling machine locks; Wisp unlocks the library spellbook, confronts doubtful reflections, and writes its final page. Successful objectives reveal that chapter's memories during play, and winning reveals its story conclusion. Standalone wins offer the next of three backstory memories; retries reset the current memory. In-story challenges use the current campaign chapter. Themed keeper-lantern, market-workbench, and library-mirror playfields distinguish the settings. This narrative progress is session-only.

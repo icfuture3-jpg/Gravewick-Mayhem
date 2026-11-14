@@ -82,3 +82,21 @@ it("maps mouse aim correctly through canvas letterboxing at different viewport s
   expect(miniPoint({left: 0, top: 0, width: 1280, height: 480}, 1120, 480)).toEqual({x: 960, y: 480});
   expect(miniPoint({left: 20, top: 50, width: 960, height: 600}, 500, 350)).toEqual({x: 480, y: 240});
 });
+
+it.each([0, 1, 2] as const)("hero %i unlocks the matching backstory through successful play, across all chapters", async (hero) => {
+  const {miniChapter} = await import("./mini-backstory");
+  for (let stage = 0; stage < 3; stage++) {
+    const s = createMini(hero, stage);
+    const lore = miniChapter(hero, stage);
+    expect(lore.memories).toHaveLength(s.goal);
+    expect(lore.ending.length).toBeGreaterThan(30);
+    if (hero === 0) {
+      for (const spark of s.sparks) {s.px = spark.x; s.py = spark.y; stepMini(s, {...idle, action: true}, 0.05); expect(s.message).toBe(lore.memories[s.progress - 1]);}
+    } else if (hero === 1) {
+      for (const target of s.targets) {s.px = target.x; s.gadget = target.kind; stepMini(s, {...idle, action: true, aimX: target.x, aimY: target.y}, 0.05); tick(s, 19); expect(s.message).toBe(lore.memories[s.progress - 1]);}
+    } else {
+      for (let round = 0; round < 3; round++) {tick(s, 110); for (const rune of s.sequence.slice()) stepMini(s, {...idle, rune}, 0.05); expect(s.message).toBe(lore.memories[round]);}
+    }
+    expect(s.status).toBe("won");
+  }
+});

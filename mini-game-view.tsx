@@ -1,3 +1,4 @@
+import { miniChapter } from "./mini-backstory";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { drawHero } from "./art";
 import { HERO_ABILITIES, GADGETS } from "./hero-abilities";
@@ -8,8 +9,10 @@ const button: CSSProperties = {padding: "8px 16px", color: "white", background: 
 export function MiniGame({hero, stage = 0, inStory = false, onContinue, onExit}: {
   hero: HeroId; stage?: number; inStory?: boolean; onContinue: (bonus: number) => void; onExit: () => void;
 }) {
+  const [chapter, setChapter] = useState(stage);
+  const lore = miniChapter(hero, chapter);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const state = useRef(createMini(hero, stage));
+  const state = useRef(createMini(hero, chapter));
   const [running, setRunning] = useState(false);
   const [version, setVersion] = useState(0);
   const [view, setView] = useState({time: state.current.time, progress: 0, status: "playing", message: "", show: true, gadget: 0});
@@ -54,17 +57,23 @@ export function MiniGame({hero, stage = 0, inStory = false, onContinue, onExit}:
     raf = requestAnimationFrame(draw);
     return () => {cancelAnimationFrame(raf); clear(); window.removeEventListener("keydown", keydown); window.removeEventListener("keyup", keyup); window.removeEventListener("blur", blur); node.removeEventListener("mousemove", move); node.removeEventListener("click", click);};
   }, [hero, running, version]);
-  const restart = () => {state.current = createMini(hero, stage); setView({time: state.current.time, progress: 0, status: "playing", message: "", show: true, gadget: 0}); setRunning(false); setVersion((n) => n + 1);};
+  const restart = (nextChapter = chapter) => {setChapter(nextChapter); state.current = createMini(hero, nextChapter); setView({time: state.current.time, progress: 0, status: "playing", message: "", show: true, gadget: 0}); setRunning(false); setVersion((n) => n + 1);};
   return <div style={{position: "absolute", inset: 0, zIndex: 70, background: "#10091e", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 12, boxSizing: "border-box", overflow: "auto"}}>
     <h2 style={{margin: 0, color: HERO_ABILITIES[hero].color}}>{HERO_ABILITIES[hero].name} · {SOLO_STORIES[hero].game}</h2>
+    <div style={{fontSize: 14, color: "#ead4ff", textAlign: "center"}}><b>Memory {chapter + 1}/3 · {lore.place}</b> — {lore.objective}</div>
     <div style={{fontSize: 14, maxWidth: 900, textAlign: "center"}}>{MINI_RULES[hero]}</div>
     <div aria-live="polite" style={{color: "#ffd36a"}}>{Math.ceil(view.time)}s · {view.progress}/{state.current.goal} {hero === 2 ? "patterns" : hero === 1 ? "targets" : "lights"}{hero === 1 ? ` · Gadget ${view.gadget + 1}: ${GADGETS[view.gadget]!.name}` : ""}</div>
+    <div aria-live="polite" style={{fontSize: 13, maxWidth: 900, textAlign: "center", minHeight: 32, color: "#e2cff5"}}>
+      {view.status === "won" ? lore.ending : view.message || SOLO_STORIES[hero].intro}
+    </div>
     <canvas ref={canvas} width={960} height={480} aria-label={`${SOLO_STORIES[hero].game} playfield`} style={{width: "100%", flex: 1, minHeight: 0, objectFit: "contain", cursor: "crosshair"}} />
     {hero === 2 && <div style={{display: "flex", gap: 8}}>{["Moon", "Star", "Eye", "Key"].map((name, i) => <button key={name} style={button} disabled={!running || view.show || view.status !== "playing"} onClick={() => {actions.current.rune = i;}}>{i + 1} · {name}</button>)}</div>}
-    <div role="status" style={{minHeight: 18, fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : view.status === "lost" ? (inStory ? "Time's up. Retry, or continue the story without a bonus." : "Time's up. Try again or choose another hero.") : view.message || (hero === 2 ? "Watch the rune lights, then repeat them." : "Ready when you are.")}</div>
+    <div role="status" style={{minHeight: 18, fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : view.status === "lost" ? (inStory ? "Time's up. Retry, or continue the story without a bonus." : "Time's up. Try again or choose another hero.") : (hero === 2 ? "Watch the rune lights, then repeat them." : "Ready when you are.")}</div>
     <div style={{display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center"}}>
       {view.status === "playing" && <button style={button} onClick={(event) => {event.currentTarget.blur(); setRunning((v) => !v);}}>{running ? "Pause mini-game" : state.current.elapsed > 0 ? "Resume mini-game" : "Start mini-game"}</button>}
-      {view.status !== "playing" && <button style={button} onClick={restart}>Retry mini-game</button>}
+      {view.status !== "playing" && <button style={button} onClick={() => restart()}>Retry mini-game</button>}
+      {!inStory && view.status === "won" && chapter < 2 && <button style={button} onClick={() => restart(chapter + 1)}>Play next backstory memory</button>}
+      {!inStory && view.status === "won" && chapter === 2 && <div>All three memories restored · {SOLO_STORIES[hero].title}</div>}
       {inStory && <button style={button} onClick={() => onContinue(miniBonus(state.current))}>{view.status === "won" ? "Continue to battle" : "Skip to battle · no bonus"}</button>}
       <button style={button} onClick={onExit}>{inStory ? "Quit story" : "Back to hero selection"}</button>
     </div>
@@ -72,10 +81,13 @@ export function MiniGame({hero, stage = 0, inStory = false, onContinue, onExit}:
 }
 
 export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: number, aimY: number) {
-  ctx.clearRect(0, 0, 960, 480); ctx.fillStyle = "#1b1030"; ctx.fillRect(0, 0, 960, 480);
+  ctx.clearRect(0, 0, 960, 480); ctx.fillStyle = s.hero === 0 ? "#102b2c" : s.hero === 1 ? "#38231c" : "#211437"; ctx.fillRect(0, 0, 960, 480);
   ctx.strokeStyle = "#39264f"; ctx.lineWidth = 1;
   for (let x = 0; x < 960; x += 60) {ctx.beginPath(); ctx.moveTo(x, 70); ctx.lineTo(x, 465); ctx.stroke();}
+  ctx.font = "bold 18px Trebuchet MS"; ctx.fillStyle = "#e8d6b8"; ctx.textAlign = "left";
+  ctx.fillText(miniChapter(s.hero, s.stage).place, 24, 30);
   if (s.hero === 0) {
+    for (let i = 0; i < 6; i++) {ctx.fillStyle = "#445754"; ctx.fillRect(80 + i * 150, 55, 42, 38); ctx.fillStyle = "#b5a37b"; ctx.fillRect(95 + i * 150, 62, 12, 20);}
     for (const spark of s.sparks) if (!spark.taken) {
       ctx.fillStyle = spark.found ? "#ffd36a" : "#50405e";
       ctx.beginPath(); ctx.arc(spark.x, spark.y, spark.found ? 14 : 5, 0, Math.PI * 2); ctx.fill();
@@ -83,6 +95,7 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     ctx.strokeStyle = "rgba(255,211,106,0.3)"; ctx.beginPath(); ctx.arc(s.px, s.py, 120, 0, Math.PI * 2); ctx.stroke();
     for (let i = 0; i < 3; i++) {ctx.fillStyle = "#b52f68"; ctx.beginPath(); ctx.arc(180 + i * 270, 240 + Math.sin(s.elapsed * 1.5 + i * 2) * 120, 25, 0, Math.PI * 2); ctx.fill();}
   } else if (s.hero === 1) {
+    for (let i = 0; i < 6; i++) {ctx.fillStyle = "#6b4c34"; ctx.fillRect(95 + i * 140, 70, 70, 150); ctx.fillStyle = "#a47d4b"; ctx.fillRect(90 + i * 140, 210, 80, 10);}
     ctx.fillStyle = "rgba(255,70,70,0.4)"; ctx.fillRect(90 + (s.elapsed * 65) % 780 - 4, 70, 8, 395);
     for (const target of s.targets) if (!target.hit) {
       ctx.fillStyle = GADGETS[target.kind]!.color; ctx.beginPath(); ctx.arc(target.x, target.y, 26, 0, Math.PI * 2); ctx.fill();
@@ -90,6 +103,7 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     }
     for (const shot of s.shots) {ctx.fillStyle = GADGETS[shot.kind]!.color; ctx.beginPath(); ctx.arc(shot.x, shot.y, 9, 0, Math.PI * 2); ctx.fill();}
   } else {
+    for (let i = 0; i < 10; i++) {ctx.fillStyle = "#513d64"; ctx.fillRect(i * 100, 40, 70, 35); ctx.fillStyle = "#9c77b3"; ctx.fillRect(i * 100 + 5, 43, 8, 28);}
     const active = s.show > 0 ? s.sequence[Math.floor((s.sequence.length * 0.8 + 0.8 - s.show) / 0.8)] : undefined;
     for (let i = 0; i < 4; i++) {
       ctx.fillStyle = active === i ? "#ffb5ed" : "#46315d"; ctx.strokeStyle = "#b481e8"; ctx.lineWidth = 3;

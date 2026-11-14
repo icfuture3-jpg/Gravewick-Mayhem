@@ -180,7 +180,7 @@ export function GameHud({ board }: { board: BoardApi }) {
           </div>
         )}
         {practising && screen === "playing" && <button style={{position: "absolute", top: 80, left: 16, zIndex: 60}} onClick={() => brawlRef.current?.refill()}>Refill health, skills &amp; ultimate</button>}
-        {screen === "heroes" && <HeroPreview onBack={() => setScreen("title")} />}
+        {screen === "heroes" && <HeroPreview onBack={() => setScreen("title")} onMini={(hero) => {setMiniHero(hero); setScreen("mini");}} />}
         {screen === "grimoire" && (
           <div style={{ ...scrim, justifyContent: "flex-start", padding: "20px 40px", overflow: "auto", gap: 6 }}>
             <h2 style={{ ...heading, fontSize: 36 }}>Grimoire</h2>
