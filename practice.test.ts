@@ -1,3 +1,4 @@
+import { HERO_ABILITIES } from "./hero-abilities";
 import { afterEach, expect, it, vi } from "vitest";
 import { createBrawl } from "./engine";
 import { PRACTICE_ENEMIES } from "./practice";
@@ -34,9 +35,9 @@ it.each(PRACTICE_ENEMIES)("runs all three heroes against %s with skills and ulti
     game.refill();
     key("KeyJ");
     key("KeyK");
-    expect(texts).toContain(`K · ${["Rift", "Dynamite Pie", "Dread Stare"][hero]}`);
+    expect(texts).toContain(`K · ${HERO_ABILITIES[hero].skillName}`);
     key("KeyL");
-    expect(texts).toContain(`L · ${["Harvest of Doom", "PANIC!", "The Forbidden Smile"][hero]}`);
+    expect(texts).toContain(`L · ${HERO_ABILITIES[hero].ultName}`);
     tick(100);
     expect(texts).toContain("Practice arena");
     game.quit();

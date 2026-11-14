@@ -184,25 +184,15 @@ export function drawHero(
   }
   const look = aim;
   if (idx === 0) {
-    // Grimble's scythe sweeps with the attack.
+    // The lantern is both his weapon and the source of reveal/portal magic.
     ctx.save();
     ctx.rotate(aim + swing * 1.6 - 0.8);
-    ctx.strokeStyle = "#8b8d9a";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(-6, 0);
-    ctx.lineTo(48, 0);
-    ctx.stroke();
-    ctx.fillStyle = "#f1deaa";
-    ctx.strokeStyle = "rgba(20,8,40,0.6)";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.moveTo(40, 0);
-    ctx.quadraticCurveTo(58, -26, 36, -34);
-    ctx.quadraticCurveTo(50, -18, 36, -4);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+    ctx.strokeStyle = "#9a7135"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(30, -12, 7, Math.PI, TAU); ctx.stroke();
+    ctx.shadowColor = "#ffd36a"; ctx.shadowBlur = 24 + swing * 24;
+    ctx.fillStyle = "#ffd36a"; ctx.fillRect(20, -12, 20, 28);
+    ctx.strokeStyle = "#9a7135"; ctx.strokeRect(20, -12, 20, 28);
+    ctx.beginPath(); ctx.moveTo(30, -12); ctx.lineTo(30, 16); ctx.stroke();
     ctx.restore();
   } else if (idx === 1) {
     // Pip's ham club.
@@ -222,11 +212,14 @@ export function drawHero(
     ctx.stroke();
     ctx.restore();
   } else {
-    // Wisp's psychic glow.
-    ctx.fillStyle = `rgba(255,110,230,${0.28 + 0.1 * Math.sin(time * 6)})`;
-    ctx.beginPath();
-    ctx.arc(Math.cos(aim) * 22, Math.sin(aim) * 22, 11, 0, TAU);
-    ctx.fill();
+    // Wisp's spellbook floats beside her and glows when firing.
+    ctx.save(); ctx.translate(Math.cos(aim) * 27, Math.sin(aim) * 20 - 12 + Math.sin(time * 4) * 4);
+    ctx.rotate(Math.sin(time * 2) * 0.12);
+    ctx.shadowColor = "#ff6fe0"; ctx.shadowBlur = 12 + swing * 18;
+    ctx.fillStyle = "#e8d5ff"; ctx.strokeStyle = "#733db0"; ctx.lineWidth = 3;
+    ctx.fillRect(-14, -9, 28, 18); ctx.strokeRect(-14, -9, 28, 18);
+    ctx.beginPath(); ctx.moveTo(0, -9); ctx.lineTo(0, 9); ctx.stroke();
+    ctx.restore();
   }
   ctx.save();
   ctx.translate(0, 24);

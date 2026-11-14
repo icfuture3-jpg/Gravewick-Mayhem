@@ -1,11 +1,8 @@
+import { HERO_ABILITIES } from "./hero-abilities";
 import { useEffect, useRef, useState } from "react";
 import { drawFigure } from "./heroes";
 
-const CAST = [
-  { name: "Grimble", role: "The Master", color: "#a283e8", blurb: "Mysterious mentor. His golden lantern reveals hidden things and opens portals." },
-  { name: "Pip", role: "The Mischief Maker", color: "#c4d443", blurb: "Hyperactive apprentice with a pouch of unpredictable gadgets. Can shrink tiny." },
-  { name: "Wisp", role: "The Clever Apprentice", color: "#ff6fe0", blurb: "Brainy and brave. Turns invisible, makes illusions, and her spellbook floats along." },
-];
+const CAST = HERO_ABILITIES;
 
 export function HeroPreview({ onBack }: { onBack: () => void }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -44,6 +41,11 @@ export function HeroPreview({ onBack }: { onBack: () => void }) {
       <div style={{ maxWidth: 560, textAlign: "center", marginBottom: 8 }}>
         <b style={{ color: hero.color }}>{hero.name} — {hero.role}</b>
         <div style={{ fontSize: 14 }}>{hero.blurb}</div>
+        <div style={{ fontSize: 13, marginTop: 6 }}>
+          <div><b>J · {hero.primaryName}:</b> {hero.primaryHint}</div>
+          <div><b>K · {hero.skillName}:</b> {hero.skillHint}</div>
+          <div><b>L · {hero.ultName}:</b> {hero.ultHint}</div>
+        </div>
       </div>
       <button onClick={onBack} style={{ marginBottom: 14, padding: "6px 26px", font: "bold 16px 'Trebuchet MS', sans-serif", color: "#fff", background: "#6a3fc0", border: "2px solid #0a0612", borderRadius: 10, cursor: "pointer" }}>Back</button>
     </div>

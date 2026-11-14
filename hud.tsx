@@ -1,3 +1,4 @@
+import { HERO_ABILITIES } from "./hero-abilities";
 import { PRACTICE_ENEMIES, type PracticeEnemy } from "./practice";
 import type { BoardApi } from "./leaderboard";
 import { HeroPreview } from "./preview";
@@ -11,12 +12,6 @@ const STAGE_LABEL = ["Backyard", "Crypts", "Citadel"];
 type Screen = Phase | "grimoire" | "board" | "heroes" | "practice";
 
 const BESTIARY = LORE.map((l) => [l.name, l.tip] as const);
-
-const HEROES_INFO = [
-  ["Grimble", "#7a4cd8", "Wide scythe sweeps. Rift drags enemies in. Ultimate: Harvest of Doom hits everything."],
-  ["Pip", "#e0503a", "Heavy ham whacks. Dynamite Pie bounces and explodes. Ultimate: PANIC! a fast, unhittable spin."],
-  ["Wisp", "#b05cf0", "Fast psychic bolts. Dread Stare freezes one foe (not bosses). Ultimate: Forbidden Smile scares everyone away and hurts them over time."],
-] as const;
 
 const root: CSSProperties = {
   position: "fixed",
@@ -166,7 +161,7 @@ export function GameHud({ board }: { board: BoardApi }) {
           <div style={scrim}>
             <h2 style={{...heading, fontSize: 36}}>Practice arena</h2>
             <label>Hero <select value={practiceHero} onChange={(e) => setPracticeHero(Number(e.target.value) as 0 | 1 | 2)}>
-              {HEROES_INFO.map(([name], index) => <option key={name} value={index}>{name}</option>)}
+              {HERO_ABILITIES.map(({name}, index) => <option key={name} value={index}>{name}</option>)}
             </select></label>
             <label>Enemy <select value={practiceEnemy} onChange={(e) => setPracticeEnemy(e.target.value as PracticeEnemy)}>
               {PRACTICE_ENEMIES.map((kind) => <option key={kind} value={kind}>{LORE.find((l) => l.kind === kind)?.name}</option>)}
@@ -182,10 +177,10 @@ export function GameHud({ board }: { board: BoardApi }) {
           <div style={{ ...scrim, justifyContent: "flex-start", padding: "20px 40px", overflow: "auto", gap: 6 }}>
             <h2 style={{ ...heading, fontSize: 36 }}>Grimoire</h2>
             <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-              {HEROES_INFO.map(([name, color, text]) => (
+              {HERO_ABILITIES.map(({name, color, primaryHint, skillName, skillHint, ultName, ultHint}) => (
                 <div key={name} style={{ width: 250, padding: 8, border: `2px solid ${color}`, borderRadius: 8, background: "rgba(0,0,0,0.4)", fontSize: 13 }}>
                   <b style={{ color }}>{name}</b>
-                  <div>{text}</div>
+                  <div>{primaryHint} K · {skillName}: {skillHint} L · {ultName}: {ultHint}</div>
                 </div>
               ))}
             </div>
