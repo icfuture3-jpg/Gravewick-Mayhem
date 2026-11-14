@@ -32,7 +32,11 @@ it.each(PRACTICE_ENEMIES)("runs all three heroes against %s with skills and ulti
     game.startPractice({hero, enemy});
     tick(10);
     game.refill();
-    key("KeyJ"); key("KeyK"); key("KeyL");
+    key("KeyJ");
+    key("KeyK");
+    expect(texts).toContain(`K · ${["Rift", "Dynamite Pie", "Dread Stare"][hero]}`);
+    key("KeyL");
+    expect(texts).toContain(`L · ${["Harvest of Doom", "PANIC!", "The Forbidden Smile"][hero]}`);
     tick(100);
     expect(texts).toContain("Practice arena");
     game.quit();

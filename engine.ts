@@ -237,6 +237,7 @@ export function createBrawl(
   let lesson = 0;
   let tutorial = false;
   let practice: PracticeOptions | null = null;
+  let cast: {hero: number; ultimate: boolean; t: number; x: number; y: number} | null = null;
   const learn = (action: TutorialAction) => { if (tutorial) lesson = advanceLesson(lesson, action); };
   const keys = new Set<string>();
   let lastMouseMove = -10;
@@ -488,6 +489,7 @@ export function createBrawl(
     if (h === undefined || h.hp <= 0 || idx === g.active) {
       return;
     }
+    g.spin = 0;
     g.active = idx;
     learn("swap");
     g.invuln = Math.max(g.invuln, 0.5);
@@ -560,6 +562,7 @@ export function createBrawl(
     if (def === undefined || h === undefined || h.cdSkill > 0) {
       return;
     }
+    cast = {hero: g.active, ultimate: false, t: 0.7, x: g.px, y: g.py};
     h.cdSkill = def.skillCd;
     learn("skill");
     const a = g.aim;
@@ -622,17 +625,23 @@ export function createBrawl(
     }
     g.ult = 0;
     const idx = g.active;
+    cast = {hero: idx, ultimate: true, t: 1.1, x: g.px, y: g.py};
     say(idx, HEROES[idx]?.ultName ?? "");
     g.shake = 26;
     g.hitstop = 0.12;
     g.zoom = 0.1;
     g.flashT = 0.3;
     g.flashColor = HEROES[idx]?.color ?? "#fff";
-    ring(g.px, g.py, 520, HEROES[idx]?.color ?? "#fff", 0.7);
-    ring(g.px, g.py, 380, "#ffffff", 0.5);
-    sound.noise(0.8, 0.25);
-    sound.tone(70, "sawtooth", 0.9, 0.2, 40);
-    burst(g.px, g.py, HEROES[idx]?.color ?? "#fff", 60, 500);
+    if (idx === 0) {
+      sound.tone(65, "sawtooth", 0.7, 0.18, -30);
+      burst(g.px, g.py, "#d6c4ff", 40, 500);
+    } else if (idx === 1) {
+      sound.noise(0.3, 0.2);
+      burst(g.px, g.py, "#ffd36a", 20, 250);
+    } else {
+      sound.tone(800, "sine", 0.8, 0.14, -650);
+      burst(g.px, g.py, "#ff8fe8", 24, 150);
+    }
     if (idx === 1) {
       g.spin = 4;
       return;
@@ -643,9 +652,7 @@ export function createBrawl(
     } else {
       for (const e of [...enemies]) hurtEnemy(e, 90, g.px, g.py, 300);
     }
-    if (idx === 2) {
-      heroes.forEach((_, i) => heal(i, 25));
-    }
+    if (idx === 2) heroes.forEach((_, i) => heal(i, 25));
   };
 
   const startStage = (stage: number) => {
@@ -720,6 +727,7 @@ export function createBrawl(
 
   const start = (mode: Mode) => {
     practice = null;
+    cast = null;
     g.mode = mode;
     tutorial = mode === "story";
     lesson = 0;
@@ -1037,6 +1045,7 @@ export function createBrawl(
 
   const update = (dt: number) => {
     g.time += dt;
+    if (cast !== null) { cast.t -= dt; if (cast.t <= 0) cast = null; }
     if (toast !== null) {
       toast.t -= dt;
       if (toast.t <= 0) toast = null;
@@ -1378,6 +1387,17 @@ export function createBrawl(
       ctx.fillStyle = "white";
       ctx.font = "18px Trebuchet MS, sans-serif";
       ctx.fillText(LESSONS[lesson]!.text, W / 2, 156);
+      ctx.restore();
+    }
+    if (cast !== null) {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.font = "bold 22px Trebuchet MS, sans-serif";
+      ctx.fillStyle = ["#d6c4ff", "#ffd36a", "#ff8fe8"][cast.hero]!;
+      ctx.strokeStyle = "#090311"; ctx.lineWidth = 5;
+      const name = cast.ultimate ? HEROES[cast.hero]!.ultName : HEROES[cast.hero]!.skillName;
+      ctx.strokeText(`${cast.ultimate ? "L" : "K"} · ${name}`, W / 2, 105);
+      ctx.fillText(`${cast.ultimate ? "L" : "K"} · ${name}`, W / 2, 105);
       ctx.restore();
     }
     // Hero cards.
@@ -1776,6 +1796,30 @@ export function createBrawl(
       ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
       ctx.lineCap = "butt";
+    }
+    if (cast?.ultimate) {
+      ctx.save();
+      const progress = 1 - cast.t / 1.1;
+      ctx.globalAlpha = Math.min(1, cast.t * 3);
+      ctx.lineWidth = 7;
+      if (cast.hero === 0) {
+        // Harvest: one enormous scythe-shaped crescent across the arena.
+        ctx.strokeStyle = "#eee2ff";
+        ctx.beginPath(); ctx.arc(cast.x, cast.y, 60 + progress * 950, -2.8 + progress, 0.6 + progress); ctx.stroke();
+      } else if (cast.hero === 1) {
+        // PANIC: short, fast streaks attached to Pip, not an arena-wide blast.
+        ctx.strokeStyle = "#ffd36a";
+        for (let i = 0; i < 3; i++) {
+          const angle = g.time * 22 + i * TAU / 3;
+          ctx.beginPath(); ctx.arc(g.px, g.py, 48 + i * 8, angle, angle + 1.2); ctx.stroke();
+        }
+      } else {
+        // Forbidden Smile: a pink spectral grin, distinct from the ice skill.
+        ctx.strokeStyle = "#ff8fe8";
+        ctx.beginPath(); ctx.arc(g.px, g.py - 60, 65, 0.15, Math.PI - 0.15); ctx.stroke();
+        for (const x of [-28, 28]) { ctx.beginPath(); ctx.moveTo(g.px + x - 10, g.py - 76); ctx.lineTo(g.px + x + 10, g.py - 66); ctx.stroke(); }
+      }
+      ctx.restore();
     }
     drawShots();
     ctx.globalCompositeOperation = "lighter";
