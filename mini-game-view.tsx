@@ -6,10 +6,10 @@ import { SOLO_STORIES, type HeroId } from "./solo-story";
 import { createMini, stepMini, miniBonus, miniPoint, MINI_RULES, type MiniInput, type MiniState } from "./mini-game";
 
 const button: CSSProperties = {padding: "8px 16px", color: "white", background: "#51317c", border: "2px solid #b392e8", borderRadius: 8, cursor: "pointer", font: "bold 15px Trebuchet MS"};
-export function MiniGame({hero, stage = 0, inStory = false, onContinue, onExit}: {
-  hero: HeroId; stage?: number; inStory?: boolean; onContinue: (bonus: number) => void; onExit: () => void;
+export function MiniGame({hero, stage = 0, onComplete, onExit}: {
+  hero: HeroId; stage?: number; onComplete: (bonus: number) => void; onExit: () => void;
 }) {
-  const [chapter, setChapter] = useState(stage);
+  const chapter = stage;
   const lore = miniChapter(hero, chapter);
   const canvas = useRef<HTMLCanvasElement>(null);
   const state = useRef(createMini(hero, chapter));
@@ -57,8 +57,9 @@ export function MiniGame({hero, stage = 0, inStory = false, onContinue, onExit}:
     raf = requestAnimationFrame(draw);
     return () => {cancelAnimationFrame(raf); clear(); window.removeEventListener("keydown", keydown); window.removeEventListener("keyup", keyup); window.removeEventListener("blur", blur); node.removeEventListener("mousemove", move); node.removeEventListener("click", click);};
   }, [hero, running, version]);
-  const restart = (nextChapter = chapter) => {setChapter(nextChapter); state.current = createMini(hero, nextChapter); setView({time: state.current.time, progress: 0, status: "playing", message: "", show: true, gadget: 0}); setRunning(false); setVersion((n) => n + 1);};
+  const restart = () => {state.current = createMini(hero, chapter); setView({time: state.current.time, progress: 0, status: "playing", message: "", show: true, gadget: 0}); setRunning(false); setVersion((n) => n + 1);};
   return <div style={{position: "absolute", inset: 0, zIndex: 70, background: "#10091e", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 12, boxSizing: "border-box", overflow: "auto"}}>
+    <div style={{color: "#ffd36a", fontWeight: "bold"}}>Gravewick Tales</div>
     <h2 style={{margin: 0, color: HERO_ABILITIES[hero].color}}>{HERO_ABILITIES[hero].name} · {SOLO_STORIES[hero].game}</h2>
     <div style={{fontSize: 14, color: "#ead4ff", textAlign: "center"}}><b>Memory {chapter + 1}/3 · {lore.place}</b> — {lore.objective}</div>
     <div style={{fontSize: 14, maxWidth: 900, textAlign: "center"}}>{MINI_RULES[hero]}</div>
@@ -68,14 +69,12 @@ export function MiniGame({hero, stage = 0, inStory = false, onContinue, onExit}:
     </div>
     <canvas ref={canvas} width={960} height={480} aria-label={`${SOLO_STORIES[hero].game} playfield`} style={{width: "100%", flex: 1, minHeight: 0, objectFit: "contain", cursor: "crosshair"}} />
     {hero === 2 && <div style={{display: "flex", gap: 8}}>{["Moon", "Star", "Eye", "Key"].map((name, i) => <button key={name} style={button} disabled={!running || view.show || view.status !== "playing"} onClick={() => {actions.current.rune = i;}}>{i + 1} · {name}</button>)}</div>}
-    <div role="status" style={{minHeight: 18, fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : view.status === "lost" ? (inStory ? "Time's up. Retry, or continue the story without a bonus." : "Time's up. Try again or choose another hero.") : (hero === 2 ? "Watch the rune lights, then repeat them." : "Ready when you are.")}</div>
+    <div role="status" style={{minHeight: 18, fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : view.status === "lost" ? "Time's up. Retry this memory, or choose another character." : (hero === 2 ? "Watch the rune lights, then repeat them." : "Ready when you are.")}</div>
     <div style={{display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center"}}>
       {view.status === "playing" && <button style={button} onClick={(event) => {event.currentTarget.blur(); setRunning((v) => !v);}}>{running ? "Pause mini-game" : state.current.elapsed > 0 ? "Resume mini-game" : "Start mini-game"}</button>}
       {view.status !== "playing" && <button style={button} onClick={() => restart()}>Retry mini-game</button>}
-      {!inStory && view.status === "won" && chapter < 2 && <button style={button} onClick={() => restart(chapter + 1)}>Play next backstory memory</button>}
-      {!inStory && view.status === "won" && chapter === 2 && <div>All three memories restored · {SOLO_STORIES[hero].title}</div>}
-      {inStory && <button style={button} onClick={() => onContinue(miniBonus(state.current))}>{view.status === "won" ? "Continue to battle" : "Skip to battle · no bonus"}</button>}
-      <button style={button} onClick={onExit}>{inStory ? "Quit story" : "Back to hero selection"}</button>
+      {view.status === "won" && <button style={button} onClick={() => onComplete(miniBonus(state.current))}>Continue tale</button>}
+      <button style={button} onClick={onExit}>Back to Gravewick Tales</button>
     </div>
   </div>;
 }

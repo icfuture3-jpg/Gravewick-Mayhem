@@ -1,5 +1,5 @@
 import { StorySelect } from "./story-select";
-import { MiniGame } from "./mini-game-view";
+import { Tales } from "./tales-view";
 import { SOLO_STORIES, type HeroId } from "./solo-story";
 import { HERO_ABILITIES } from "./hero-abilities";
 import { PRACTICE_ENEMIES, type PracticeEnemy } from "./practice";
@@ -126,7 +126,7 @@ export function GameHud({ board }: { board: BoardApi }) {
   }, []);
 
   const begin = (mode: Mode) => { setPractising(false); brawlRef.current?.start(mode); };
-  const beginSolo = (hero: HeroId) => {setPractising(false); brawlRef.current?.startSolo(hero);};
+  const beginTale = (hero: HeroId) => {setPractising(false); setMiniHero(hero); setScreen("mini");};
   const beginPractice = () => {
     setPractising(true);
     brawlRef.current?.startPractice({hero: practiceHero, enemy: practiceEnemy});
@@ -142,8 +142,8 @@ export function GameHud({ board }: { board: BoardApi }) {
           style={{ width: "100%", height: "100%", display: "block", cursor: "none" }}
         />
         {screen === "title" && (
-          <div style={scrim}>
-            <svg width="640" height="150" viewBox="0 0 640 150" role="img" aria-label="Gravewick Mayhem">
+          <div style={{...scrim, gap: 8}}>
+            <svg width="640" height="125" viewBox="0 0 640 150" role="img" aria-label="Gravewick Mayhem">
               <text x="320" y="62" textAnchor="middle" fontFamily="Impact, sans-serif" fontSize="64" fill="#ffd36a" stroke="#0a0612" strokeWidth="8" paintOrder="stroke">
                 GRAVEWICK
               </text>
@@ -151,7 +151,8 @@ export function GameHud({ board }: { board: BoardApi }) {
                 MAYHEM
               </text>
             </svg>
-            <button style={btn} onClick={() => setScreen("stories")}>Hero stories &amp; mini-games</button>
+            <button style={btn} onClick={() => begin("story")}>Play Gravewick Mayhem</button>
+            <button style={{...btn, background: "linear-gradient(#76612b,#433018)"}} onClick={() => setScreen("stories")}>Gravewick Tales</button>
             <button style={btn} onClick={() => begin("endless")}>Endless arena</button>
             <button style={btn} onClick={() => setScreen("practice")}>Practice arena</button>
             <button style={btn} onClick={() => openBoard("endless")}>Local high scores</button>
@@ -162,9 +163,8 @@ export function GameHud({ board }: { board: BoardApi }) {
             </div>
           </div>
         )}
-        {screen === "stories" && <StorySelect onStory={beginSolo} onMini={(hero) => {setMiniHero(hero); setScreen("mini");}} onTeam={() => begin("story")} onBack={() => setScreen("title")} />}
-        {screen === "mini" && <MiniGame key={`mini-${miniHero}`} hero={miniHero} onContinue={() => {}} onExit={() => setScreen("stories")} />}
-        {screen === "challenge" && info?.soloHero !== null && info?.soloHero !== undefined && <MiniGame key={`chapter-${info.soloHero}-${info.stage}`} hero={info.soloHero} stage={info.stage} inStory onContinue={(bonus) => brawlRef.current?.completeChallenge(bonus)} onExit={() => brawlRef.current?.quit()} />}
+        {screen === "stories" && <StorySelect onStory={beginTale} onBack={() => setScreen("title")} />}
+        {screen === "mini" && <Tales key={`tale-${miniHero}`} hero={miniHero} onExit={() => setScreen("stories")} />}
         {screen === "practice" && (
           <div style={scrim}>
             <h2 style={{...heading, fontSize: 36}}>Practice arena</h2>
@@ -180,7 +180,7 @@ export function GameHud({ board }: { board: BoardApi }) {
           </div>
         )}
         {practising && screen === "playing" && <button style={{position: "absolute", top: 80, left: 16, zIndex: 60}} onClick={() => brawlRef.current?.refill()}>Refill health, skills &amp; ultimate</button>}
-        {screen === "heroes" && <HeroPreview onBack={() => setScreen("title")} onMini={(hero) => {setMiniHero(hero); setScreen("mini");}} />}
+        {screen === "heroes" && <HeroPreview onBack={() => setScreen("title")} onMini={beginTale} />}
         {screen === "grimoire" && (
           <div style={{ ...scrim, justifyContent: "flex-start", padding: "20px 40px", overflow: "auto", gap: 6 }}>
             <h2 style={{ ...heading, fontSize: 36 }}>Grimoire</h2>
@@ -250,8 +250,8 @@ export function GameHud({ board }: { board: BoardApi }) {
             {!info.practice && info.soloHero === null && saved === false && <div role="status">Browser storage is unavailable. Scores last only for this session.</div>}
             {!info.practice && info.soloHero === null && saved === true && <div role="status">High scores saved on this device.</div>}
             {!info.practice && info.soloHero === null && <BoardTable rows={rows} mode={info.mode} compact />}
-            <button style={btn} onClick={() => info.soloHero !== null ? beginSolo(info.soloHero) : info.practice ? beginPractice() : begin(info.mode)}>Play again</button>
-            <button style={btn} onClick={() => {brawlRef.current?.quit(); setScreen("stories");}}>Choose another hero</button>
+            <button style={btn} onClick={() => info.practice ? beginPractice() : begin(info.mode)}>Play again</button>
+            <button style={btn} onClick={() => {brawlRef.current?.quit(); setScreen("stories");}}>Gravewick Tales</button>
             <button style={btn} onClick={() => brawlRef.current?.quit()}>Title</button>
           </div>
         )}
