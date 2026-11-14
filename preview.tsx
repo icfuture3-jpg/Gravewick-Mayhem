@@ -23,7 +23,7 @@ export function HeroPreview({ onBack, onMini }: { onBack: () => void; onMini: (h
           <div><b>L · {hero.ultName}:</b> {hero.ultHint}</div>
         </div>
       </div>
-      <button onClick={() => onMini(picked)} style={{padding: "8px 20px", background: "#51317c", color: "white", cursor: "pointer", marginBottom: 8}}>Play {hero.name}’s mini-game</button>
+      <button onClick={() => onMini(picked)} style={{padding: "8px 20px", background: "#51317c", color: "white", cursor: "pointer", marginBottom: 8}}>Play {hero.name}’s Gravewick Tale</button>
       <button onClick={onBack} style={{ marginBottom: 14, padding: "6px 26px", font: "bold 16px 'Trebuchet MS', sans-serif", color: "#fff", background: "#6a3fc0", border: "2px solid #0a0612", borderRadius: 10, cursor: "pointer" }}>Back</button>
     </div>
   );
