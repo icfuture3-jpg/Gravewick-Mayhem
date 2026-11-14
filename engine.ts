@@ -1,3 +1,4 @@
+import type { PracticeOptions } from "./practice";
 import { LESSONS, advanceLesson, type TutorialAction } from "./tutorial";
 import { attractPickup, bounceAtWalls } from "./physics";
 import {
@@ -27,9 +28,12 @@ export interface Summary {
   stage: number;
   wave: number;
   mode: Mode;
+  practice: boolean;
 }
 export interface Brawl {
   start(mode: Mode): void;
+  startPractice(options: PracticeOptions): void;
+  refill(): void;
   togglePause(): void;
   quit(): void;
   setMuted(muted: boolean): void;
@@ -232,6 +236,7 @@ export function createBrawl(
   const sound = createSound();
   let lesson = 0;
   let tutorial = false;
+  let practice: PracticeOptions | null = null;
   const learn = (action: TutorialAction) => { if (tutorial) lesson = advanceLesson(lesson, action); };
   const keys = new Set<string>();
   let lastMouseMove = -10;
@@ -299,6 +304,7 @@ export function createBrawl(
     stage: g.stage,
     wave: g.wave,
     mode: g.mode,
+    practice: practice !== null,
   });
 
   const setPhase = (phase: Phase) => {
@@ -713,6 +719,7 @@ export function createBrawl(
   };
 
   const start = (mode: Mode) => {
+    practice = null;
     g.mode = mode;
     tutorial = mode === "story";
     lesson = 0;
@@ -935,6 +942,15 @@ export function createBrawl(
 
   const updateShots = (dt: number) => {
     for (const s of [...shots]) {
+      if (s.kind === "laser" && !s.friendly) {
+        const angle = Math.atan2(s.vy, s.vx);
+        const target = Math.atan2(g.py - s.y, g.px - s.x);
+        const difference = Math.atan2(Math.sin(target - angle), Math.cos(target - angle));
+        const turn = Math.max(-dt * 0.7, Math.min(dt * 0.7, difference));
+        const speed = Math.hypot(s.vx, s.vy);
+        s.vx = Math.cos(angle + turn) * speed;
+        s.vy = Math.sin(angle + turn) * speed;
+      }
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       s.life -= dt;
@@ -1138,7 +1154,9 @@ export function createBrawl(
     const training = tutorial && lesson < LESSONS.length && g.wave === 0;
 
     // Spawning and waves.
-    if (training) {
+    if (practice !== null) {
+      if (enemies.length === 0) spawnEnemy(practice.enemy, W / 2, PAD + 70);
+    } else if (training) {
       // Effects and projectiles still update while enemy spawning waits.
     } else if (g.stageClearT > 0) {
       g.stageClearT -= dt;
@@ -2024,6 +2042,20 @@ export function createBrawl(
 
   return {
     start,
+    startPractice(options) {
+      start("endless");
+      practice = options;
+      g.active = options.hero;
+      g.ult = 100;
+      g.banner = { text: "Practice arena", sub: ENEMY[options.enemy].name, t: 2 };
+      spawnEnemy(options.enemy, W / 2, PAD + 70);
+    },
+    refill() {
+      if (practice === null) return;
+      for (const hero of heroes) { hero.hp = 100; hero.cdSkill = 0; hero.cdPrimary = 0; }
+      g.ult = 100;
+      g.invuln = 1;
+    },
     togglePause: toggle,
     quit() {
       sound.music(false);
