@@ -12,14 +12,14 @@ import {
   drawHero,
   drawShadow,
   makeDecor,
-  motionOf,
   type Decor,
   type EnemyKind,
 } from "./art";
 import { createSound } from "./audio";
 import { LORE, loreFor } from "./brawl/lore";
 import { drawFigure } from "./heroes";
-import { ENDING, INTRO, type Scene } from "./movie";
+import { INTRO, arrival, bossEntrance, turningPoint, celebration, type Scene } from "./movie";
+import { drawAction } from "./cinematic";
 
 export type Mode = "story" | "endless";
 export type Phase = "title" | "playing" | "paused" | "over" | "victory";
@@ -210,6 +210,7 @@ export function createBrawl(
   const keys = new Set<string>();
   const pendingActions = new Set<"attack" | "skill" | "ultimate">();
   let lastMouseMove = -10;
+  const bossTurns = new Set<number>();
   let movie: { scenes: Scene[]; i: number; t: number; done: () => void } | null = null;
   const mouse = { x: W * 0.7, y: H * 0.5, left: false, right: false };
 
@@ -670,6 +671,7 @@ export function createBrawl(
         const [bi, bt] = BOSS_CUTS[g.stage] ?? BOSS_CUTS[0] ?? [0, ""];
         g.cuts = [{ idx: bi, text: bt }];
         g.cutT = 3;
+        playMovie(bossEntrance(g.stage), () => {});
       }
     } else if (g.wave % 6 === 0) {
       const boss = BOSSES[(g.wave / 6 - 1) % 3] ?? "boogeyman";
@@ -681,9 +683,15 @@ export function createBrawl(
     }
   };
 
+  const movieSound = (scene: Scene | undefined) => {
+    if (scene === undefined) return;
+    if (scene.action === "gadget" || scene.action === "team") sound.noise(0.3, 0.12);
+    sound.tone(scene.action === "victory" ? 660 : scene.action === "portal" ? 180 : 440,
+      "triangle", 0.6, 0.1, scene.action === "victory" ? 330 : 120);
+  };
   const playMovie = (scenes: Scene[], done: () => void) => {
     movie = { scenes, i: 0, t: 0, done };
-    mv.act.clear();
+    movieSound(scenes[0]);
     mv.camX = 0;
     mv.zoom = 1;
     mv.last = g.time;
@@ -702,16 +710,23 @@ export function createBrawl(
     movie.i += 1;
     movie.t = 0;
     if (movie.i >= movie.scenes.length) endMovie();
+    else movieSound(movie.scenes[movie.i]);
   };
   const endMovie = () => {
     const m = movie;
     movie = null;
+    keys.clear();
+    pendingActions.clear();
+    mouse.left = false;
+    mouse.right = false;
     last = performance.now();
     m?.done();
   };
 
   const start = (mode: Mode) => {
     practice = null;
+    movie = null;
+    bossTurns.clear();
     cast = null;
     keys.clear();
     pendingActions.clear();
@@ -1040,21 +1055,34 @@ export function createBrawl(
 
   const update = (dt: number) => {
     g.time += dt;
+    if (bookOpen && g.phase === "playing") return;
+    if (movie !== null) {
+      movie.t += dt;
+      const scene = movie.scenes[movie.i];
+      if (scene !== undefined && movie.t >= scene.duration) {
+        movie.i += 1;
+        movie.t = 0;
+        if (movie.i >= movie.scenes.length) endMovie();
+        else movieSound(movie.scenes[movie.i]);
+      }
+      return;
+    }
     if (cast !== null) { cast.t -= dt; if (cast.t <= 0) cast = null; }
     if (toast !== null) {
       toast.t -= dt;
       if (toast.t <= 0) toast = null;
-    }
-    if (bookOpen && g.phase === "playing") return;
-    if (movie !== null) {
-      movie.t += dt;
-      return;
     }
     if (g.phase !== "playing") {
       return;
     }
     if (g.hitstop > 0) {
       g.hitstop -= dt;
+      return;
+    }
+    if (g.mode === "story" && practice === null && !bossTurns.has(g.stage) &&
+      enemies.some((e) => e.boss && e.hp > 0 && e.hp <= e.max / 2)) {
+      bossTurns.add(g.stage);
+      playMovie(turningPoint(g.stage), () => {});
       return;
     }
     // Input.
@@ -1179,6 +1207,7 @@ export function createBrawl(
           } else heal(i, 35);
         });
         startStage(g.stage + 1);
+        playMovie(arrival(g.stage), () => {});
       }
     } else if (g.queue.length > 0) {
       g.spawnT -= dt;
@@ -1200,9 +1229,9 @@ export function createBrawl(
         if (g.stage >= 2) {
           sound.music(false);
           g.score += 5000;
-          playMovie(ENDING, () => setPhase("victory"));
+          playMovie(celebration(g.stage), () => setPhase("victory"));
         } else {
-          g.stageClearT = 3.2;
+          playMovie(celebration(g.stage), () => { g.stageClearT = 0.05; });
           g.banner = { text: "Stage clear!", sub: "Fallen heroes come back!", t: 3 };
           g.cuts = [{ idx: g.stage % 3, text: CLEAR_CUTS[g.stage % 3] ?? "" }];
           g.cutT = 3;
@@ -1213,6 +1242,7 @@ export function createBrawl(
       }
     }
 
+    if (movie !== null) return;
     for (const e of [...enemies]) {
       updateEnemy(e, dt);
     }
@@ -1869,7 +1899,7 @@ export function createBrawl(
     if (movie !== null) drawMovie(movie.scenes[movie.i], movie.i, movie.scenes.length, movie.t);
   };
 
-  const mv = { last: 0, camX: 0, zoom: 1, act: new Map<number, { x: number; y: number; s: number; lean: number; kick: number }>() };
+  const mv = { last: 0, camX: 0, zoom: 1 };
   const drawMovie = (sc: Scene | undefined, i: number, n: number, t: number) => {
     if (sc === undefined) return;
     ctx.save();
@@ -1891,60 +1921,11 @@ export function createBrawl(
     drawBackground(ctx, sc.stage, g.decor, g.time);
     ctx.fillStyle = sc.tint;
     ctx.fillRect(-60, -60, W + 120, H + 120);
-    // Actors keep their own position between scenes and walk to their marks.
-    for (const a of sc.actors) {
-      let st = mv.act.get(a.idx);
-      if (st === undefined) {
-        st = { x: a.x < W / 2 ? -140 : W + 140, y: 0, s: a.s, lean: 0, kick: 0 };
-        mv.act.set(a.idx, st);
-      }
+    if (sc.shake) {
+      const punch = Math.max(0, 1 - Math.abs(t / sc.duration - 0.62) * 9) * 9;
+      ctx.translate(Math.sin(t * 80) * punch, Math.cos(t * 95) * punch * 0.5);
     }
-    const order = [...mv.act.entries()].sort((p, q) => (p[1].s - q[1].s));
-    for (const [idx, st] of order) {
-      const a = sc.actors.find((q) => q.idx === idx);
-      const off = st.x < -100 || st.x > W + 100;
-      let tx: number;
-      let ts: number;
-      if (a === undefined) {
-        tx = st.x < W / 2 ? -160 : W + 160;
-        ts = st.s;
-      } else {
-        const talking = a.idx === sc.who;
-        // Speaker steps forward a touch, listeners step back.
-        tx = a.x + (talking && sc.actors.length > 1 ? (a.face === 1 ? 24 : -24) : 0);
-        ts = a.s * (talking ? 1.08 : sc.actors.length > 1 ? 0.96 : 1);
-      }
-      st.x += (tx - st.x) * ease(2.6);
-      st.s += (ts - st.s) * ease(3);
-      if (a === undefined && off) continue;
-      const m = motionOf(st, st.x, 0, now);
-      // Listeners react when a new line starts.
-      if (a !== undefined && a.idx !== sc.who && t < 0.5) st.kick = Math.max(st.kick, 1 - t * 2);
-      st.kick *= Math.exp(-md * 2);
-      const talking = a !== undefined && a.idx === sc.who;
-      const speed = Math.abs(tx - st.x) * 2.6;
-      const walking = speed > 25;
-      const wob = Math.sin(m.phase * TAU * 2);
-      const celebrate = a?.hop === true ? Math.abs(Math.sin(now * 5 + idx)) : 0;
-      const talkBob = talking && !walking ? Math.sin(now * 7) * 2 + Math.max(0, Math.sin(now * 3.1)) * -4 : 0;
-      const dir = a !== undefined ? a.face : (tx > st.x ? 1 : -1);
-      const lean = (walking ? Math.sign(tx - st.x) * 0.1 : dir * 0.04 * (talking ? 2 : 1)) + (celebrate > 0 ? Math.sin(now * 5 + idx) * 0.08 : 0);
-      st.lean += (lean - st.lean) * ease(8);
-      const y = 250 - celebrate * 36 - st.kick * 8 - Math.abs(wob) * (walking ? 7 : 0) + talkBob;
-      const sq = 1 + (celebrate > 0.7 ? 0.05 : 0) - st.kick * 0.04;
-      ctx.fillStyle = "rgba(0,0,0,0.35)";
-      ctx.beginPath();
-      const sh = 1 - celebrate * 0.2;
-      ctx.ellipse(st.x, 250 + 70 * st.s * 0.68, 40 * st.s * 0.68 * sh, 9 * st.s * 0.68 * sh, 0, 0, TAU);
-      ctx.fill();
-      ctx.save();
-      ctx.translate(st.x, 250 + 70 * st.s * 0.68);
-      ctx.rotate(st.lean);
-      ctx.scale(1 / sq, sq);
-      ctx.translate(0, -(250 + 70 * st.s * 0.68));
-      drawFigure(ctx, idx, 0, y, st.s * 0.68, dir === 1 ? 0 : Math.PI, idx !== 1, Math.sin(now * 1.3 + idx) > 0.96, now, walking ? { speed: 100, phase: m.phase } : undefined);
-      ctx.restore();
-    }
+    drawAction(ctx, sc, t);
     // Soft dip in at the start of each line.
     if (t < 0.3) {
       ctx.fillStyle = `rgba(5,2,10,${0.35 * (1 - t / 0.3)})`;
@@ -1985,7 +1966,7 @@ export function createBrawl(
     ctx.fillStyle = "rgba(255,255,255,0.6)";
     ctx.font = "13px Trebuchet MS, sans-serif";
     ctx.textAlign = "right";
-    ctx.fillText(`${i + 1}/${n}   Click / Space: next   Esc: skip`, W - 24, H - 18);
+    ctx.fillText(`${i + 1}/${n}   Auto-play · Click / Space: next · Esc: skip`, W - 24, H - 18);
   };
 
   const frame = (now: number) => {
