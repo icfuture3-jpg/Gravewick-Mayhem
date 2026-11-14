@@ -39,7 +39,7 @@ function setup(hero: 0 | 1 | 2, enemy: "ghoul" | "clown" | "boogeyman" = "ghoul"
   };
   game.startPractice({hero, enemy});
   tick();
-  return {game, tick, key, texts, history, player, foe, scale};
+  return {game, tick, key, dispatch, texts, history, player, foe, scale};
 }
 
 it("Grimble reveals real supplies, teleports within range, obeys cooldown, and reveals all with his lantern ultimate", () => {
@@ -154,4 +154,17 @@ it("Pip's tiny hitbox lets an enemy get closer before contact damage", () => {
   const tiny = firstContact(true);
   expect(normal).toBeGreaterThan(24);
   expect(tiny).toBeLessThan(23);
+});
+
+// Input can arrive and be released in the gap between two requestAnimationFrame callbacks.
+it("does not drop quick J/K/L taps between frames", () => {
+  const s = setup(2);
+  const tap = (code: string) => {s.dispatch("keydown", code); s.dispatch("keyup", code); s.tick();};
+  tap("KeyK");
+  expect(s.player().invisible).toBeGreaterThan(0);
+  tap("KeyJ");
+  expect(s.player().invisible).toBe(0);
+  tap("KeyL");
+  expect(s.texts).toContain("2 ILLUSIONS");
+  s.game.destroy();
 });

@@ -208,6 +208,7 @@ export function createBrawl(
   let cast: {hero: number; ultimate: boolean; t: number; x: number; y: number} | null = null;
   const learn = (action: TutorialAction) => { if (tutorial) lesson = advanceLesson(lesson, action); };
   const keys = new Set<string>();
+  const pendingActions = new Set<"attack" | "skill" | "ultimate">();
   let lastMouseMove = -10;
   let movie: { scenes: Scene[]; i: number; t: number; done: () => void } | null = null;
   const mouse = { x: W * 0.7, y: H * 0.5, left: false, right: false };
@@ -687,6 +688,7 @@ export function createBrawl(
     mv.zoom = 1;
     mv.last = g.time;
     keys.clear();
+    pendingActions.clear();
     mouse.left = false;
     mouse.right = false;
   };
@@ -711,6 +713,10 @@ export function createBrawl(
   const start = (mode: Mode) => {
     practice = null;
     cast = null;
+    keys.clear();
+    pendingActions.clear();
+    mouse.left = false;
+    mouse.right = false;
     g.mode = mode;
     tutorial = mode === "story";
     lesson = 0;
@@ -1093,7 +1099,7 @@ export function createBrawl(
     g.aim = Math.atan2(mouse.y - g.py, mouse.x - g.px);
     // Aim assist: snap to a nearby enemy in the aim direction; with the
     // keyboard only (mouse idle), face the closest enemy.
-    const keyAttack = keys.has("KeyJ") || keys.has("KeyK") || keys.has("KeyL") || keys.has("Space");
+    const keyAttack = pendingActions.size > 0 || keys.has("KeyJ") || keys.has("KeyK") || keys.has("KeyL") || keys.has("Space");
     const mouseIdle = g.time - lastMouseMove > 1.5;
     let best: Enemy | null = null;
     let bestScore = Infinity;
@@ -1109,9 +1115,10 @@ export function createBrawl(
     if (best !== null) {
       g.aim = Math.atan2(best.y - g.py, best.x - g.px);
     }
-    if (keys.has("KeyJ") || mouse.left) primary();
-    if (keys.has("KeyK") || mouse.right) skill();
-    if (keys.has("KeyL") || keys.has("Space")) ultimate();
+    if (keys.has("KeyJ") || mouse.left || pendingActions.has("attack")) primary();
+    if (keys.has("KeyK") || mouse.right || pendingActions.has("skill")) skill();
+    if (keys.has("KeyL") || keys.has("Space") || pendingActions.has("ultimate")) ultimate();
+    pendingActions.clear();
 
     g.invuln -= dt;
     g.swing = Math.max(0, g.swing - dt * 5);
@@ -2023,6 +2030,11 @@ export function createBrawl(
     if (g.phase !== "playing" && g.phase !== "paused") {
       return;
     }
+    if (g.phase === "playing" && !bookOpen) {
+      if (event.code === "KeyJ") pendingActions.add("attack");
+      if (event.code === "KeyK") pendingActions.add("skill");
+      if (event.code === "KeyL" || event.code === "Space") pendingActions.add("ultimate");
+    }
     if (event.code === "KeyQ") {
       for (let i = 1; i <= 2; i += 1) {
         const idx = (g.active + i) % 3;
@@ -2050,8 +2062,8 @@ export function createBrawl(
       if (event.button === 0) advanceMovie();
       return;
     }
-    if (event.button === 0) mouse.left = true;
-    if (event.button === 2) mouse.right = true;
+    if (event.button === 0) { mouse.left = true; if (g.phase === "playing" && !bookOpen) pendingActions.add("attack"); }
+    if (event.button === 2) { mouse.right = true; if (g.phase === "playing" && !bookOpen) pendingActions.add("skill"); }
   };
   const onUp = (event: MouseEvent) => {
     if (event.button === 0) mouse.left = false;
@@ -2060,6 +2072,7 @@ export function createBrawl(
   const onMenu = (event: Event) => event.preventDefault();
   const onBlur = () => {
     keys.clear();
+    pendingActions.clear();
     mouse.left = false;
     mouse.right = false;
   };
