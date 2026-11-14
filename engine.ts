@@ -224,6 +224,7 @@ export function makeWave(mode: Mode, stage: number, wave: number): EnemyKind[] {
 export function createBrawl(
   canvas: HTMLCanvasElement,
   onPhase: (phase: Phase, summary: Summary) => void,
+  onMutedChange: (muted: boolean) => void = () => {},
 ): Brawl {
   const ctx = canvas.getContext("2d");
   if (ctx === null) {
@@ -713,6 +714,15 @@ export function createBrawl(
   };
 
   const start = (mode: Mode) => {
+    keys.clear();
+    mouse.left = false;
+    mouse.right = false;
+    movie = null;
+    last = performance.now();
+    lastMouseMove = -10;
+    Object.assign(g, { dashT: 0, dashCd: 0, dx: 1, dy: 0, chain: 0, chainT: 0,
+      hitstop: 0, shake: 0, swing: 0, swapT: 0, zoom: 0, flashT: 0, moving: 0, comboT: 0 });
+    toast = null;
     g.mode = mode;
     tutorial = mode === "story";
     lesson = 0;
@@ -1962,6 +1972,7 @@ export function createBrawl(
     if (event.code === "Space" || event.code.startsWith("Arrow")) {
       event.preventDefault();
     }
+    if (event.repeat && ["Escape", "KeyP", "KeyQ", "KeyG", "KeyM", "Space", "Enter"].includes(event.code)) return;
     if (movie !== null) {
       if (event.code === "Escape") endMovie();
       else if (event.code === "Space" || event.code === "Enter" || event.code === "KeyJ") advanceMovie();
@@ -1989,6 +2000,7 @@ export function createBrawl(
     else if (event.code === "KeyM") {
       muteState.on = !muteState.on;
       sound.setMuted(muteState.on);
+      onMutedChange(muteState.on);
     }
   };
   const onKeyUp = (event: KeyboardEvent) => keys.delete(event.code);
@@ -2032,6 +2044,7 @@ export function createBrawl(
     setMuted(muted) {
       muteState.on = muted;
       sound.setMuted(muted);
+      onMutedChange(muted);
     },
     destroy() {
       cancelAnimationFrame(raf);
