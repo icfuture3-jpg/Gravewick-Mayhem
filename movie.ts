@@ -1,38 +1,55 @@
-// Story cutscenes: short scripted scenes with the three heroes.
+// Short, automatically advancing action beats using the original animated models.
+export type Action = "portal" | "gadget" | "illusion" | "team" | "victory";
 export interface Actor {
-  idx: number; // 0 Grimble, 1 Pip, 2 Wisp
+  idx: number;
   x: number;
   y: number;
   s: number;
-  face: 1 | -1; // 1 = looks right
+  face: 1 | -1;
   hop?: boolean;
 }
 export interface Scene {
-  stage: number; // arena backdrop
-  tint: string; // overlay colour
+  stage: number;
+  soloHero?: 0 | 1 | 2;
+  tint: string;
   caption?: string;
-  who: number; // speaker (-1 narrator)
+  who: number;
   text: string;
   actors: Actor[];
+  action: Action;
+  duration: number;
   shake?: boolean;
-  voice?: string; // spoken-line clip name
 }
 
-const G = (x: number, s = 1.7, face: 1 | -1 = 1, hop = false): Actor => ({ idx: 0, x, y: 330, s, face, hop });
-const P = (x: number, s = 1.7, face: 1 | -1 = 1, hop = false): Actor => ({ idx: 1, x, y: 330, s, face, hop });
-const W = (x: number, s = 1.7, face: 1 | -1 = 1, hop = false): Actor => ({ idx: 2, x, y: 330, s, face, hop });
+const trio = (): Actor[] => [0, 1, 2].map((idx) => ({idx, x: 240 + idx * 230, y: 270, s: 1.7, face: 1}));
+const beat = (stage: number, action: Action, caption: string, text: string, who: number, duration = 3): Scene => ({
+  stage, action, caption, text, who, duration, actors: trio(),
+  tint: "rgba(18,6,42,0.22)", shake: action === "gadget" || action === "team",
+});
+const places = ["Backyard breach", "Into the crypts", "Storm the citadel"];
 
-export const INTRO: Scene[] = [
-  { voice: "intro-narrator", stage: 0, tint: "rgba(20,10,60,0.45)", caption: "Gravewick, the town between worlds", who: -1, text: "Every night, lost stars slip out of the sky and fall into Gravewick.", actors: [] },
-  { voice: "intro-grimble-1", stage: 0, tint: "rgba(20,10,60,0.35)", who: 0, text: "Well, well, well... what have we wandered into? My lantern says the portals are leaking.", actors: [G(480, 2.2)] },
-  { voice: "intro-pip", stage: 0, tint: "rgba(20,10,60,0.3)", who: 1, text: "Monsters! Finally! I brought gadgets. Several. One of them might be a sandwich.", actors: [G(300, 1.6, 1), P(660, 2, -1, true)] },
-  { voice: "intro-wisp", stage: 0, tint: "rgba(20,10,60,0.3)", who: 2, text: "Please stay behind me, both of you. I've read the book on this. Twice.", actors: [G(220, 1.5, 1), P(480, 1.6, 1), W(740, 2, -1)] },
-  { voice: "intro-grimble-2", stage: 0, tint: "rgba(40,10,60,0.3)", who: 0, text: "Apprentices, the Masters of the Between never run from mayhem. Let's smash some monsters!", actors: [G(300, 2, 1, true), P(480, 1.7, 1, true), W(660, 1.7, -1, true)] },
-];
-
-export const ENDING: Scene[] = [
-  { voice: "end-grimble", stage: 2, tint: "rgba(255,200,80,0.15)", who: 0, text: "The portals are closed, the stars are home, and Gravewick is quiet again.", actors: [G(480, 2.2)] },
-  { voice: "end-wisp", stage: 2, tint: "rgba(255,200,80,0.15)", who: 2, text: "I'll admit it. That was... mildly impressive.", actors: [G(300, 1.6, 1), W(660, 2, -1)] },
-  { voice: "end-pip", stage: 2, tint: "rgba(255,200,80,0.15)", who: 1, text: "I KNEW the sandwich gadget would save us!", actors: [P(480, 2.2, 1, true), W(740, 1.5, -1)] },
-  { voice: "end-narrator", stage: 2, tint: "rgba(255,220,120,0.2)", caption: "Masters of the Between", who: -1, text: "Grimble, Pip and Wisp bow. Tomorrow, the lantern will light another adventure.", actors: [G(260, 1.9, 1, true), P(480, 1.9, 1, true), W(700, 1.9, -1, true)] },
-];
+export function arrival(stage: number): Scene[] {
+  return [
+    beat(stage, "portal", places[stage] ?? "Into the fray", "Grimble tears open a golden portal. The team dives through!", 0),
+    beat(stage, "gadget", "Small hero. BIG trouble.", "Pip shrinks under a charging monster and launches a live gadget!", 1),
+    beat(stage, "illusion", "Now you see three of me!", "Wisp vanishes. Her mirror doubles unleash a storm of spellbook bolts!", 2),
+  ];
+}
+export function bossEntrance(stage: number): Scene[] {
+  return [beat(stage, "team", "Boss incoming!", "Lantern ready. Gadgets armed. Spellbook open. Together!", 0, 3.5)];
+}
+export function turningPoint(stage: number): Scene[] {
+  return [
+    beat(stage, "portal", "Turn the tide!", "Grimble opens a flanking portal as the monster strikes!", 0, 2.6),
+    beat(stage, "team", "Triple threat!", "Tiny Pip slides in. Wisp's doubles cover him. The heroes counterattack!", 2, 3),
+  ];
+}
+export function celebration(stage: number): Scene[] {
+  return [
+    beat(stage, "team", "Finishing move!", "Golden light, a gadget blast, and a volley of magic drive the darkness back!", 1, 3),
+    beat(stage, "victory", stage === 2 ? "GRAVEWICK SAVED!" : "VICTORY!", stage === 2
+      ? "The portal seals. Grimble, Pip and Wisp celebrate: Gravewick is safe!"
+      : "The team lands together. One triumphant pose—then on to the next fight!", -1, 3.5),
+  ];
+}
+export const INTRO = arrival(0);

@@ -1,3 +1,5 @@
+import { soloScenes, SOLO_STORIES, type HeroId } from "./solo-story";
+import { HERO_ABILITIES, GADGETS } from "./hero-abilities";
 import type { PracticeOptions } from "./practice";
 import { LESSONS, advanceLesson, type TutorialAction } from "./tutorial";
 import { attractPickup, bounceAtWalls } from "./physics";
@@ -11,17 +13,17 @@ import {
   drawHero,
   drawShadow,
   makeDecor,
-  motionOf,
   type Decor,
   type EnemyKind,
 } from "./art";
 import { createSound } from "./audio";
 import { LORE, loreFor } from "./brawl/lore";
 import { drawFigure } from "./heroes";
-import { ENDING, INTRO, type Scene } from "./movie";
+import { INTRO, arrival, bossEntrance, turningPoint, celebration, type Scene } from "./movie";
+import { drawAction } from "./cinematic";
 
 export type Mode = "story" | "endless";
-export type Phase = "title" | "playing" | "paused" | "over" | "victory";
+export type Phase = "title" | "playing" | "paused" | "over" | "victory" | "challenge";
 export interface Summary {
   score: number;
   kills: number;
@@ -29,9 +31,12 @@ export interface Summary {
   wave: number;
   mode: Mode;
   practice: boolean;
+  soloHero: HeroId | null;
 }
 export interface Brawl {
   start(mode: Mode): void;
+  startSolo(hero: HeroId): void;
+  completeChallenge(bonus: number): void;
   startPractice(options: PracticeOptions): void;
   refill(): void;
   togglePause(): void;
@@ -43,49 +48,16 @@ export interface Brawl {
 const PAD = 36;
 const PLAYER_R = 14;
 
-interface HeroDef {
-  name: string;
-  color: string;
-  speed: number;
-  primaryCd: number;
-  skillName: string;
-  skillCd: number;
-  ultName: string;
-  barks: string[];
-}
-
-const HEROES: HeroDef[] = [
-  {
-    name: "Grimble",
-    color: "#7a4cd8",
-    speed: 235,
-    primaryCd: 0.38,
-    skillName: "Rift",
-    skillCd: 9,
-    ultName: "Harvest of Doom",
-    barks: ["Your time is up.", "Another soul for the pile.", "Boo-hoo."],
-  },
-  {
-    name: "Pip",
-    color: "#e0503a",
-    speed: 215,
-    primaryCd: 0.55,
-    skillName: "Dynamite Pie",
-    skillCd: 5,
-    ultName: "PANIC!",
-    barks: ["Ham time!", "Whoa, I did that?", "Hee hee hee!"],
-  },
-  {
-    name: "Wisp",
-    color: "#b05cf0",
-    speed: 225,
-    primaryCd: 0.28,
-    skillName: "Dread Stare",
-    skillCd: 11,
-    ultName: "The Forbidden Smile",
-    barks: ["Pathetic.", "Do as I say.", "Smile. Now."],
-  },
-];
+const HEROES = HERO_ABILITIES.map((hero, i) => ({
+  ...hero,
+  speed: [235, 215, 225][i]!,
+  primaryCd: [0.38, 0.55, 0.28][i]!,
+  barks: [
+    ["Your time is up.", "Another soul for the pile.", "Boo-hoo."],
+    ["Ham time!", "Whoa, I did that?", "Hee hee hee!"],
+    ["Pathetic.", "Do as I say.", "Smile. Now."],
+  ][i]!,
+}));
 
 const STAGE_CUTS: [number, string][][] = [
   [
@@ -129,7 +101,6 @@ interface Enemy {
   kx: number;
   ky: number;
   freeze: number;
-  fear: number;
   flash: number;
   atk: number;
   t1: number;
@@ -150,6 +121,7 @@ interface Shot {
   life: number;
   kind: "bolt" | "pie" | "snot" | "laser" | "orb";
   bounces: number;
+  gadget?: number;
 }
 
 interface Zone {
@@ -237,9 +209,13 @@ export function createBrawl(
   let lesson = 0;
   let tutorial = false;
   let practice: PracticeOptions | null = null;
+  let soloHero: HeroId | null = null;
+  let cast: {hero: number; ultimate: boolean; t: number; x: number; y: number} | null = null;
   const learn = (action: TutorialAction) => { if (tutorial) lesson = advanceLesson(lesson, action); };
   const keys = new Set<string>();
+  const pendingActions = new Set<"attack" | "skill" | "ultimate">();
   let lastMouseMove = -10;
+  const bossTurns = new Set<number>();
   let movie: { scenes: Scene[]; i: number; t: number; done: () => void } | null = null;
   const mouse = { x: W * 0.7, y: H * 0.5, left: false, right: false };
 
@@ -259,7 +235,8 @@ export function createBrawl(
     active: 0,
     swing: 0,
     invuln: 0,
-    spin: 0,
+    shrink: 0,
+    invisible: 0,
     swapT: 0,
     px: W / 2,
     py: H / 2 + 60,
@@ -285,6 +262,22 @@ export function createBrawl(
     flashColor: "#fff",
     moving: 0,
   };
+  let portals: {x: number; y: number; t: number}[] = [];
+  let hidden: {x: number; y: number}[] = [];
+  let decoys: {x: number; y: number; t: number; hp: number; shotCd: number}[] = [];
+  const playerRadius = () => PLAYER_R * (g.shrink > 0 ? 0.45 : 1);
+  const enemyTarget = (x: number, y: number) => {
+    const targets = [...decoys.filter((d) => d.hp > 0 && d.t > 0), ...(g.invisible > 0 ? [] : [{x: g.px, y: g.py}])];
+    return targets.sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))[0];
+  };
+  const reveal = (x: number, y: number, radius: number) => {
+    hidden = hidden.filter((supply) => {
+      if (Math.hypot(supply.x - x, supply.y - y) > radius) return true;
+      pickups.push({...supply, t: 0});
+      floats.push({...supply, text: "Hidden supply revealed!", life: 1.8, color: "#ffd36a"});
+      return false;
+    });
+  };
   let heroes: HeroState[] = [];
   let enemies: Enemy[] = [];
   let shots: Shot[] = [];
@@ -305,6 +298,7 @@ export function createBrawl(
     wave: g.wave,
     mode: g.mode,
     practice: practice !== null,
+    soloHero,
   });
 
   const setPhase = (phase: Phase) => {
@@ -319,6 +313,7 @@ export function createBrawl(
   };
 
   const say = (who: number, text: string) => {
+    if (soloHero !== null && who !== soloHero) return;
     g.bark = { text, t: 2.2, who };
   };
 
@@ -363,13 +358,12 @@ export function createBrawl(
       kind,
       x,
       y,
-      hp: def.hp,
-      max: def.hp,
+      hp: def.hp * (soloHero === null ? 1 : 0.7),
+      max: def.hp * (soloHero === null ? 1 : 0.7),
       r: def.r,
       kx: 0,
       ky: 0,
       freeze: 0,
-      fear: 0,
       flash: 0,
       atk: 0.5,
       t1: 1.5 + Math.random(),
@@ -456,13 +450,15 @@ export function createBrawl(
   const allDead = () => heroes.every((h) => h.hp <= 0);
 
   const hurtPlayer = (dmg: number) => {
-    if (g.invuln > 0 || g.spin > 0 || g.phase !== "playing") {
+    if (g.invuln > 0 || g.phase !== "playing") {
       return;
     }
     const h = heroes[g.active];
     if (h === undefined) {
       return;
     }
+    if (g.shrink > 0) dmg *= 0.5;
+    if (soloHero !== null) dmg *= 0.7;
     h.hp = Math.max(0, h.hp - dmg);
     g.invuln = 0.45;
     g.shake = Math.max(g.shake, 9);
@@ -477,6 +473,8 @@ export function createBrawl(
         return;
       }
       const next = heroes.findIndex((o) => o.hp > 0);
+      g.shrink = 0;
+      g.invisible = 0;
       g.active = next;
       g.swapT = 0.5;
       say(next, "I got this!");
@@ -485,9 +483,11 @@ export function createBrawl(
 
   const swapTo = (idx: number) => {
     const h = heroes[idx];
-    if (h === undefined || h.hp <= 0 || idx === g.active) {
+    if (soloHero !== null || h === undefined || h.hp <= 0 || idx === g.active) {
       return;
     }
+    g.shrink = 0;
+    g.invisible = 0;
     g.active = idx;
     learn("swap");
     g.invuln = Math.max(g.invuln, 0.5);
@@ -503,6 +503,8 @@ export function createBrawl(
     if (def === undefined || h === undefined || h.cdPrimary > 0) {
       return;
     }
+    g.invisible = 0;
+    if (g.active === 0) reveal(g.px, g.py, 180);
     h.cdPrimary = def.primaryCd;
     learn("attack");
     const a = g.aim;
@@ -560,15 +562,23 @@ export function createBrawl(
     if (def === undefined || h === undefined || h.cdSkill > 0) {
       return;
     }
+    cast = {hero: g.active, ultimate: false, t: 0.7, x: g.px, y: g.py};
     h.cdSkill = def.skillCd;
     learn("skill");
     const a = g.aim;
     if (g.active === 0) {
       const d = Math.min(260, Math.hypot(mouse.x - g.px, mouse.y - g.py));
+      portals = [{x: g.px, y: g.py, t: 1.4}];
+      g.px += Math.cos(a) * d;
+      g.py += Math.sin(a) * d;
+      clampPlayer();
+      portals.push({x: g.px, y: g.py, t: 1.4});
+      reveal(g.px, g.py, 180);
+      g.invuln = Math.max(g.invuln, 0.4);
       zones.push({
         kind: "rift",
-        x: g.px + Math.cos(a) * d,
-        y: g.py + Math.sin(a) * d,
+        x: g.px,
+        y: g.py,
         r: 120,
         t: 0,
         dur: 3,
@@ -578,6 +588,8 @@ export function createBrawl(
       });
       sound.tone(90, "sawtooth", 0.6, 0.15, 60);
     } else if (g.active === 1) {
+      const gadget = Math.floor(Math.random() * GADGETS.length);
+      floats.push({x: g.px, y: g.py - 35, text: GADGETS[gadget]!.name, life: 1.5, color: GADGETS[gadget]!.color});
       shots.push({
         x: g.px,
         y: g.py,
@@ -588,30 +600,13 @@ export function createBrawl(
         friendly: true,
         life: 2.2,
         kind: "pie",
+        gadget,
         bounces: 2,
       });
       sound.tone(400, "square", 0.15, 0.1, 200);
     } else {
-      // Dread Stare: lock eyes with the foe nearest your aim. Bosses are too big to freeze.
-      let tgt: Enemy | null = null;
-      let best = Infinity;
-      for (const e of enemies) {
-        const d = Math.hypot(e.x - g.px, e.y - g.py);
-        const off = Math.abs(Math.atan2(Math.sin(Math.atan2(e.y - g.py, e.x - g.px) - a), Math.cos(Math.atan2(e.y - g.py, e.x - g.px) - a)));
-        const score = d + off * 260;
-        if (d < 520 && off < 0.9 && score < best) {
-          best = score;
-          tgt = e;
-        }
-      }
-      if (tgt !== null) {
-        if (!tgt.boss) tgt.freeze = 3;
-        tgt.flash = 0.1;
-        hurtEnemy(tgt, 20, g.px, g.py, 0);
-        ring(tgt.x, tgt.y, 60, "#9fe3ff", 0.5);
-        burst(tgt.x, tgt.y, "#9fe3ff", 24, 220);
-      }
-      g.shake = Math.max(g.shake, 8);
+      g.invisible = 5;
+      burst(g.px, g.py, "#b8caff", 24, 220);
       sound.tone(900, "sine", 0.5, 0.12, -600);
     }
   };
@@ -622,34 +617,39 @@ export function createBrawl(
     }
     g.ult = 0;
     const idx = g.active;
+    cast = {hero: idx, ultimate: true, t: 1.1, x: g.px, y: g.py};
     say(idx, HEROES[idx]?.ultName ?? "");
     g.shake = 26;
     g.hitstop = 0.12;
     g.zoom = 0.1;
     g.flashT = 0.3;
     g.flashColor = HEROES[idx]?.color ?? "#fff";
-    ring(g.px, g.py, 520, HEROES[idx]?.color ?? "#fff", 0.7);
-    ring(g.px, g.py, 380, "#ffffff", 0.5);
-    sound.noise(0.8, 0.25);
-    sound.tone(70, "sawtooth", 0.9, 0.2, 40);
-    burst(g.px, g.py, HEROES[idx]?.color ?? "#fff", 60, 500);
-    if (idx === 1) {
-      g.spin = 4;
-      return;
-    }
-    if (idx === 2) {
-      // Forbidden Smile: everyone flees and takes psychic damage over time (see updateEnemy).
-      for (const e of enemies) e.fear = e.boss ? 3 : 6;
-    } else {
+    g.invisible = 0;
+    if (idx === 0) {
+      reveal(g.px, g.py, Infinity);
       for (const e of [...enemies]) hurtEnemy(e, 90, g.px, g.py, 300);
-    }
-    if (idx === 2) {
-      heroes.forEach((_, i) => heal(i, 25));
+      sound.tone(260, "triangle", 0.7, 0.18, 400);
+      burst(g.px, g.py, "#ffd36a", 40, 500);
+    } else if (idx === 1) {
+      g.shrink = 6;
+      sound.tone(600, "square", 0.4, 0.12, 600);
+      burst(g.px, g.py, "#c4d443", 20, 250);
+    } else {
+      decoys = [-1, 1].map((side) => ({
+        x: Math.min(W - PAD, Math.max(PAD, g.px + side * 100)),
+        y: Math.min(H - PAD, Math.max(PAD, g.py - 70)),
+        t: 6, hp: 3, shotCd: 0,
+      }));
+      sound.tone(800, "sine", 0.8, 0.14, -650);
+      burst(g.px, g.py, "#ff8fe8", 24, 150);
     }
   };
 
   const startStage = (stage: number) => {
     g.stage = stage;
+    portals = [];
+    decoys = [];
+    hidden = [{x: 180, y: 200}, {x: W - 180, y: 200}, {x: W / 2, y: H - 130}];
     g.wave = 0;
     g.decor = makeDecor();
     enemies = [];
@@ -659,7 +659,7 @@ export function createBrawl(
     g.banner = { text: STAGE_NAMES[stage] ?? "Endless Mayhem", sub: "Stage " + (stage + 1), t: 2.6 };
     g.cuts = [];
     g.cutT = 3;
-    if (g.mode === "story") {
+    if (g.mode === "story" && soloHero === null) {
       const lines = STAGE_CUTS[stage] ?? [];
       g.cuts = lines.map(([idx, text]) => ({ idx, text }));
     }
@@ -667,6 +667,7 @@ export function createBrawl(
 
   const nextWave = () => {
     g.wave += 1;
+    if (soloHero !== null) heal(soloHero, 15);
     g.spawnT = 0.8;
     if (g.mode === "story") {
       if (g.wave <= 3) {
@@ -677,8 +678,9 @@ export function createBrawl(
         g.queue = [boss];
         g.banner = { text: ENEMY[boss].name, sub: "Boss fight", t: 2.4 };
         const [bi, bt] = BOSS_CUTS[g.stage] ?? BOSS_CUTS[0] ?? [0, ""];
-        g.cuts = [{ idx: bi, text: bt }];
+        g.cuts = soloHero === null ? [{ idx: bi, text: bt }] : [];
         g.cutT = 3;
+        playMovie(soloHero === null ? bossEntrance(g.stage) : soloScenes(soloHero, g.stage, "boss"), () => {});
       }
     } else if (g.wave % 6 === 0) {
       const boss = BOSSES[(g.wave / 6 - 1) % 3] ?? "boogeyman";
@@ -690,13 +692,20 @@ export function createBrawl(
     }
   };
 
+  const movieSound = (scene: Scene | undefined) => {
+    if (scene === undefined) return;
+    if (scene.action === "gadget" || scene.action === "team") sound.noise(0.3, 0.12);
+    sound.tone(scene.action === "victory" ? 660 : scene.action === "portal" ? 180 : 440,
+      "triangle", 0.6, 0.1, scene.action === "victory" ? 330 : 120);
+  };
   const playMovie = (scenes: Scene[], done: () => void) => {
     movie = { scenes, i: 0, t: 0, done };
-    mv.act.clear();
+    movieSound(scenes[0]);
     mv.camX = 0;
     mv.zoom = 1;
     mv.last = g.time;
     keys.clear();
+    pendingActions.clear();
     mouse.left = false;
     mouse.right = false;
   };
@@ -710,30 +719,44 @@ export function createBrawl(
     movie.i += 1;
     movie.t = 0;
     if (movie.i >= movie.scenes.length) endMovie();
+    else movieSound(movie.scenes[movie.i]);
   };
   const endMovie = () => {
     const m = movie;
     movie = null;
+    keys.clear();
+    pendingActions.clear();
+    mouse.left = false;
+    mouse.right = false;
     last = performance.now();
     m?.done();
   };
 
-  const start = (mode: Mode) => {
+  const start = (mode: Mode, hero: HeroId | null = null) => {
+    soloHero = hero;
     practice = null;
+    movie = null;
+    bossTurns.clear();
+    cast = null;
+    keys.clear();
+    pendingActions.clear();
+    mouse.left = false;
+    mouse.right = false;
     g.mode = mode;
-    tutorial = mode === "story";
+    tutorial = mode === "story" && soloHero === null;
     lesson = 0;
     g.score = 0;
     g.kills = 0;
     g.combo = 0;
     g.ult = 0;
-    g.active = 0;
+    g.active = soloHero ?? 0;
     g.px = W / 2;
     g.py = H / 2 + 60;
     g.invuln = 1;
-    g.spin = 0;
+    g.shrink = 0;
+    g.invisible = 0;
     g.stageClearT = 0;
-    heroes = HEROES.map(() => ({ hp: 100, cdPrimary: 0, cdSkill: 0 }));
+    heroes = HEROES.map((_, i) => ({ hp: soloHero === null || soloHero === i ? 100 : 0, cdPrimary: 0, cdSkill: 0 }));
     parts = [];
     rings = [];
     pickups = [];
@@ -743,10 +766,13 @@ export function createBrawl(
     sound.music(true);
     say(0, "Let's make some mayhem.");
     setPhase("playing");
-    if (mode === "story") playMovie(INTRO, () => {});
+    if (mode === "story") {
+      if (soloHero === null) playMovie(INTRO, () => {});
+      else playMovie(soloScenes(soloHero, 0, "arrival"), () => setPhase("challenge"));
+    }
   };
 
-  const chase = (e: Enemy, speed: number, dt: number, tx = g.px, ty = g.py) => {
+  const chase = (e: Enemy, speed: number, dt: number, tx: number, ty: number) => {
     const a = Math.atan2(ty - e.y, tx - e.x);
     e.x += Math.cos(a) * speed * dt;
     e.y += Math.sin(a) * speed * dt;
@@ -795,19 +821,10 @@ export function createBrawl(
       e.freeze -= dt;
       return;
     }
-    if (e.fear > 0) {
-      e.fear -= dt;
-      const away = Math.atan2(e.y - g.py, e.x - g.px);
-      const sp = Math.max(ENEMY[e.kind].speed, 90) * 1.3;
-      e.x = Math.min(W - 20, Math.max(20, e.x + Math.cos(away) * sp * dt));
-      e.y = Math.min(H - 20, Math.max(20, e.y + Math.sin(away) * sp * dt));
-      if (Math.floor(g.time * 4) !== Math.floor((g.time - dt) * 4)) {
-        hurtEnemy(e, e.boss ? 6 : 10, e.x, e.y, 0);
-      }
-      return;
-    }
-    const dx = g.px - e.x;
-    const dy = g.py - e.y;
+    const target = enemyTarget(e.x, e.y);
+    if (target === undefined) return;
+    const dx = target.x - e.x;
+    const dy = target.y - e.y;
     const dist = Math.hypot(dx, dy);
     const toward = Math.atan2(dy, dx);
     const def = ENEMY[e.kind];
@@ -816,19 +833,19 @@ export function createBrawl(
     switch (e.kind) {
       case "clown": {
         const wobble = 1 + 0.4 * Math.sin(g.time * 4 + e.hp);
-        chase(e, def.speed * wobble, dt);
+        chase(e, def.speed * wobble, dt, target.x, target.y);
         break;
       }
       case "slime":
       case "minislime":
-        chase(e, def.speed, dt);
+        chase(e, def.speed, dt, target.x, target.y);
         break;
       case "bat": {
         const side = e.hp % 2 > 1 ? 1 : -1;
         if (dist > 270) {
-          chase(e, def.speed, dt);
+          chase(e, def.speed, dt, target.x, target.y);
         } else if (dist < 190) {
-          chase(e, -def.speed, dt);
+          chase(e, -def.speed, dt, target.x, target.y);
         } else {
           e.x += Math.cos(toward + side * 1.57) * def.speed * 0.6 * dt;
           e.y += Math.sin(toward + side * 1.57) * def.speed * 0.6 * dt;
@@ -845,14 +862,15 @@ export function createBrawl(
       }
       case "ghoul": {
         if (e.state === 0) {
-          chase(e, def.speed, dt);
+          chase(e, def.speed, dt, target.x, target.y);
           if (dist < 85 && e.t1 <= 0) {
             e.state = 1;
             e.t2 = 0.75;
           }
         } else {
           if (e.t2 <= 0) {
-            if (dist < 100 + PLAYER_R) {
+            for (const d of decoys) { if (Math.hypot(e.x - d.x, e.y - d.y) < 100 + PLAYER_R) d.hp -= 1; }
+            if (Math.hypot(e.x - g.px, e.y - g.py) < 100 + playerRadius()) {
               hurtPlayer(24);
             }
             burst(e.x + Math.cos(toward) * 60, e.y + Math.sin(toward) * 60, "#ffd36a", 14, 220);
@@ -865,7 +883,7 @@ export function createBrawl(
       }
       case "boogeyman": {
         if (dist > 190) {
-          chase(e, def.speed, dt);
+          chase(e, def.speed, dt, target.x, target.y);
         }
         if (e.t1 <= 0) {
           for (let i = -2; i <= 2; i += 1) {
@@ -884,7 +902,7 @@ export function createBrawl(
       }
       case "nergal": {
         if (dist > 230) {
-          chase(e, def.speed, dt);
+          chase(e, def.speed, dt, target.x, target.y);
         }
         if (e.t1 <= 0) {
           for (let i = 0; i < 10; i += 1) {
@@ -912,8 +930,8 @@ export function createBrawl(
         if (e.t1 <= 0) {
           zones.push({
             kind: "meteor",
-            x: g.px,
-            y: g.py,
+            x: target.x,
+            y: target.y,
             r: 80,
             t: 0,
             dur: 1.1,
@@ -932,7 +950,9 @@ export function createBrawl(
         break;
       }
     }
-    if (def.touch > 0 && dist < e.r + PLAYER_R && e.atk <= 0) {
+    const decoy = decoys.find((d) => Math.hypot(e.x - d.x, e.y - d.y) < e.r + PLAYER_R);
+    if (def.touch > 0 && decoy !== undefined && e.atk <= 0) { decoy.hp -= 1; e.atk = 0.9; }
+    if (def.touch > 0 && Math.hypot(e.x - g.px, e.y - g.py) < e.r + playerRadius() && e.atk <= 0) {
       hurtPlayer(def.touch);
       e.atk = 0.9;
     }
@@ -944,7 +964,8 @@ export function createBrawl(
     for (const s of [...shots]) {
       if (s.kind === "laser" && !s.friendly) {
         const angle = Math.atan2(s.vy, s.vx);
-        const target = Math.atan2(g.py - s.y, g.px - s.x);
+        const focus = enemyTarget(s.x, s.y);
+        const target = focus === undefined ? angle : Math.atan2(focus.y - s.y, focus.x - s.x);
         const difference = Math.atan2(Math.sin(target - angle), Math.cos(target - angle));
         const turn = Math.max(-dt * 0.7, Math.min(dt * 0.7, difference));
         const speed = Math.hypot(s.vx, s.vy);
@@ -957,13 +978,16 @@ export function createBrawl(
       const out = s.x < 10 || s.x > W - 10 || s.y < 10 || s.y > H - 10;
       const explode = () => {
         shots = shots.filter((o) => o !== s);
-        burst(s.x, s.y, "#ff9a3a", 30, 320);
+        const gadget = GADGETS[s.gadget ?? 0]!;
+        burst(s.x, s.y, gadget.color, 30, 320);
+        ring(s.x, s.y, 105, gadget.color, 0.5);
         g.shake = Math.max(g.shake, 14);
         g.hitstop = Math.max(g.hitstop, 0.05);
         sound.noise(0.4, 0.22);
         for (const e of [...enemies]) {
           if (Math.hypot(e.x - s.x, e.y - s.y) < 105 + e.r) {
-            hurtEnemy(e, 55, s.x, s.y, 520);
+            if (!e.boss) e.freeze = Math.max(e.freeze, gadget.freeze);
+            hurtEnemy(e, gadget.damage, s.x, s.y, gadget.knock);
           }
         }
       };
@@ -984,7 +1008,13 @@ export function createBrawl(
           shots = shots.filter((o) => o !== s);
           hurtEnemy(hit, s.dmg, s.x - s.vx * 0.01, s.y - s.vy * 0.01, 260);
         }
-      } else if (Math.hypot(g.px - s.x, g.py - s.y) < PLAYER_R + s.r) {
+      } else if (decoys.some((d) => {
+        if (Math.hypot(d.x - s.x, d.y - s.y) >= PLAYER_R + s.r) return false;
+        d.hp -= 1;
+        return true;
+      })) {
+        shots = shots.filter((o) => o !== s);
+      } else if (Math.hypot(g.px - s.x, g.py - s.y) < playerRadius() + s.r) {
         shots = shots.filter((o) => o !== s);
         hurtPlayer(s.dmg);
       }
@@ -1017,14 +1047,15 @@ export function createBrawl(
         burst(z.x, z.y, "#ff7a2a", 30, 300);
         g.shake = Math.max(g.shake, 12);
         sound.noise(0.4, 0.2);
-        if (Math.hypot(g.px - z.x, g.py - z.y) < z.r + PLAYER_R) {
+        for (const d of decoys) { if (Math.hypot(d.x - z.x, d.y - z.y) < z.r + PLAYER_R) d.hp -= 1; }
+        if (Math.hypot(g.px - z.x, g.py - z.y) < z.r + playerRadius()) {
           hurtPlayer(20);
         }
       } else if (z.kind === "sweep" && z.t > 0.8 && !z.dealt) {
         const a = z.ang + (z.t - 0.8) * 2.2;
         const rel = (g.px - z.x) * Math.cos(a) + (g.py - z.y) * Math.sin(a);
         const perp = Math.abs(-(g.px - z.x) * Math.sin(a) + (g.py - z.y) * Math.cos(a));
-        if (rel > 0 && rel < z.r && perp < 26) {
+        if (rel > 0 && rel < z.r && perp < 12 + playerRadius()) {
           z.dealt = true;
           hurtPlayer(18);
         }
@@ -1037,20 +1068,34 @@ export function createBrawl(
 
   const update = (dt: number) => {
     g.time += dt;
-    if (toast !== null) {
-      toast.t -= dt;
-      if (toast.t <= 0) toast = null;
-    }
     if (bookOpen && g.phase === "playing") return;
     if (movie !== null) {
       movie.t += dt;
+      const scene = movie.scenes[movie.i];
+      if (scene !== undefined && movie.t >= scene.duration) {
+        movie.i += 1;
+        movie.t = 0;
+        if (movie.i >= movie.scenes.length) endMovie();
+        else movieSound(movie.scenes[movie.i]);
+      }
       return;
+    }
+    if (cast !== null) { cast.t -= dt; if (cast.t <= 0) cast = null; }
+    if (toast !== null) {
+      toast.t -= dt;
+      if (toast.t <= 0) toast = null;
     }
     if (g.phase !== "playing") {
       return;
     }
     if (g.hitstop > 0) {
       g.hitstop -= dt;
+      return;
+    }
+    if (g.mode === "story" && practice === null && !bossTurns.has(g.stage) &&
+      enemies.some((e) => e.boss && e.hp > 0 && e.hp <= e.max / 2)) {
+      bossTurns.add(g.stage);
+      playMovie(soloHero === null ? turningPoint(g.stage) : soloScenes(soloHero, g.stage, "turn"), () => {});
       return;
     }
     // Input.
@@ -1084,7 +1129,7 @@ export function createBrawl(
       clampPlayer();
       parts.push({ x: g.px, y: g.py, vx: 0, vy: 0, life: 0.3, max: 0.3, color: HEROES[g.active]?.color ?? "#fff", size: 14 });
     } else if (len > 0 && def !== undefined) {
-      const spd = g.spin > 0 ? def.speed * 1.5 : def.speed;
+      const spd = g.shrink > 0 ? def.speed * 1.5 : def.speed;
       g.px += (mx / len) * spd * dt;
       g.py += (my / len) * spd * dt;
       clampPlayer();
@@ -1095,7 +1140,7 @@ export function createBrawl(
     g.aim = Math.atan2(mouse.y - g.py, mouse.x - g.px);
     // Aim assist: snap to a nearby enemy in the aim direction; with the
     // keyboard only (mouse idle), face the closest enemy.
-    const keyAttack = keys.has("KeyJ") || keys.has("KeyK") || keys.has("KeyL") || keys.has("Space");
+    const keyAttack = pendingActions.size > 0 || keys.has("KeyJ") || keys.has("KeyK") || keys.has("KeyL") || keys.has("Space");
     const mouseIdle = g.time - lastMouseMove > 1.5;
     let best: Enemy | null = null;
     let bestScore = Infinity;
@@ -1111,9 +1156,10 @@ export function createBrawl(
     if (best !== null) {
       g.aim = Math.atan2(best.y - g.py, best.x - g.px);
     }
-    if (keys.has("KeyJ") || mouse.left) primary();
-    if (keys.has("KeyK") || mouse.right) skill();
-    if (keys.has("KeyL") || keys.has("Space")) ultimate();
+    if (keys.has("KeyJ") || mouse.left || pendingActions.has("attack")) primary();
+    if (keys.has("KeyK") || mouse.right || pendingActions.has("skill")) skill();
+    if (keys.has("KeyL") || keys.has("Space") || pendingActions.has("ultimate")) ultimate();
+    pendingActions.clear();
 
     g.invuln -= dt;
     g.swing = Math.max(0, g.swing - dt * 5);
@@ -1137,18 +1183,24 @@ export function createBrawl(
         h.hp = Math.min(100, h.hp + dt * 2);
       }
     });
-    if (g.spin > 0) {
-      g.spin -= dt;
-      g.swing = 1;
-      if (Math.floor(g.time * 7) !== Math.floor((g.time - dt) * 7)) {
-        sound.noise(0.1, 0.1);
-        for (const e of [...enemies]) {
-          if (Math.hypot(e.x - g.px, e.y - g.py) < 115 + e.r) {
-            hurtEnemy(e, 14, g.px, g.py, 420);
-          }
-        }
+    g.shrink = Math.max(0, g.shrink - dt);
+    g.invisible = Math.max(0, g.invisible - dt);
+    portals.forEach((p) => {p.t -= dt;});
+    portals = portals.filter((p) => p.t > 0);
+    decoys = decoys.filter((d) => d.t > dt && d.hp > 0);
+    for (const d of decoys) {
+      d.t -= dt;
+      d.shotCd -= dt;
+      const target = enemies.reduce<Enemy | undefined>((best, e) =>
+        best === undefined || Math.hypot(e.x - d.x, e.y - d.y) < Math.hypot(best.x - d.x, best.y - d.y) ? e : best, undefined);
+      if (target !== undefined && d.shotCd <= 0) {
+        const a = Math.atan2(target.y - d.y, target.x - d.x);
+        shots.push({x: d.x, y: d.y, vx: Math.cos(a) * 450, vy: Math.sin(a) * 450,
+          r: 7, dmg: 8, friendly: true, life: 1.5, kind: "bolt", bounces: 0});
+        d.shotCd = 0.7;
       }
     }
+    decoys = decoys.filter((d) => d.t > 0 && d.hp > 0);
 
     // Let new players practise before the first story wave.
     const training = tutorial && lesson < LESSONS.length && g.wave === 0;
@@ -1162,12 +1214,14 @@ export function createBrawl(
       g.stageClearT -= dt;
       if (g.stageClearT <= 0) {
         heroes.forEach((h, i) => {
+          if (soloHero !== null && i !== soloHero) return;
           if (h.hp <= 0) {
             h.hp = 60;
             burst(g.px, g.py, HEROES[i]?.color ?? "#fff", 24, 260);
           } else heal(i, 35);
         });
         startStage(g.stage + 1);
+        playMovie(soloHero === null ? arrival(g.stage) : soloScenes(soloHero, g.stage, "arrival"), () => {if (soloHero !== null) setPhase("challenge");});
       }
     } else if (g.queue.length > 0) {
       g.spawnT -= dt;
@@ -1189,11 +1243,11 @@ export function createBrawl(
         if (g.stage >= 2) {
           sound.music(false);
           g.score += 5000;
-          playMovie(ENDING, () => setPhase("victory"));
+          playMovie(soloHero === null ? celebration(g.stage) : soloScenes(soloHero, g.stage, "win"), () => setPhase("victory"));
         } else {
-          g.stageClearT = 3.2;
+          playMovie(soloHero === null ? celebration(g.stage) : soloScenes(soloHero, g.stage, "win"), () => { g.stageClearT = 0.05; });
           g.banner = { text: "Stage clear!", sub: "Fallen heroes come back!", t: 3 };
-          g.cuts = [{ idx: g.stage % 3, text: CLEAR_CUTS[g.stage % 3] ?? "" }];
+          g.cuts = soloHero === null ? [{ idx: g.stage % 3, text: CLEAR_CUTS[g.stage % 3] ?? "" }] : [];
           g.cutT = 3;
           g.score += 1000;
         }
@@ -1202,6 +1256,7 @@ export function createBrawl(
       }
     }
 
+    if (movie !== null) return;
     for (const e of [...enemies]) {
       updateEnemy(e, dt);
     }
@@ -1335,7 +1390,7 @@ export function createBrawl(
         ctx.shadowColor = "#b05cf0";
         ctx.shadowBlur = 14;
       } else if (s.kind === "pie") {
-        ctx.fillStyle = "#ffe08a";
+        ctx.fillStyle = GADGETS[s.gadget ?? 0]!.color;
         ctx.strokeStyle = "#0a0612";
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -1380,11 +1435,23 @@ export function createBrawl(
       ctx.fillText(LESSONS[lesson]!.text, W / 2, 156);
       ctx.restore();
     }
+    if (cast !== null) {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.font = "bold 22px Trebuchet MS, sans-serif";
+      ctx.fillStyle = ["#d6c4ff", "#ffd36a", "#ff8fe8"][cast.hero]!;
+      ctx.strokeStyle = "#090311"; ctx.lineWidth = 5;
+      const name = cast.ultimate ? HEROES[cast.hero]!.ultName : HEROES[cast.hero]!.skillName;
+      ctx.strokeText(`${cast.ultimate ? "L" : "K"} · ${name}`, W / 2, 105);
+      ctx.fillText(`${cast.ultimate ? "L" : "K"} · ${name}`, W / 2, 105);
+      ctx.restore();
+    }
     // Hero cards.
     heroes.forEach((h, i) => {
+      if (soloHero !== null && i !== soloHero) return;
       const def = HEROES[i];
       if (def === undefined) return;
-      const x = 14 + i * 150;
+      const x = 14 + (soloHero === null ? i * 150 : 0);
       const y = 12;
       const act = i === g.active;
       ctx.fillStyle = act ? "rgba(20,10,40,0.85)" : "rgba(10,6,20,0.6)";
@@ -1419,7 +1486,7 @@ export function createBrawl(
     ctx.font = "13px Trebuchet MS, sans-serif";
     ctx.fillStyle = "#cbb8ff";
     ctx.fillText(
-      g.mode === "story"
+      soloHero !== null ? `${HEROES[soloHero]!.name} · Chapter ${g.stage + 1} · Wave ${g.wave}/4` : g.mode === "story"
         ? `${STAGE_NAMES[g.stage] ?? ""}  ·  ${g.wave >= 4 ? "Boss" : `Wave ${g.wave}/3`}`
         : `Endless  ·  Wave ${g.wave}`,
       W - 16,
@@ -1434,29 +1501,27 @@ export function createBrawl(
     const def = HEROES[g.active];
     const h = heroes[g.active];
     if (def !== undefined && h !== undefined) {
-      const bx = W / 2 - 150;
-      const by = H - 40;
+      const bx = 16;
+      const by = H - 46;
       ctx.textAlign = "left";
       ctx.font = "bold 12px Trebuchet MS, sans-serif";
-      ctx.fillStyle = "rgba(10,6,20,0.7)";
-      ctx.fillRect(bx - 8, by - 8, 316, 40);
+      ctx.fillStyle = "rgba(10,6,20,0.85)";
+      ctx.fillRect(bx - 8, by - 10, 750, 52);
       ctx.fillStyle = "#fff";
-      ctx.fillText(`J ${def.name}`, bx, by + 4);
-      ctx.fillStyle = g.dashCd <= 0 ? "#9fe3ff" : "#667";
-      ctx.fillText("Shift Dash", bx, by + 20);
-      ctx.fillStyle = "#fff";
-      ctx.fillText(`K ${def.skillName}`, bx + 80, by + 4);
-      ctx.fillStyle = "#333";
-      ctx.fillRect(bx + 80, by + 10, 70, 6);
-      ctx.fillStyle = "#6ab8ff";
-      ctx.fillRect(bx + 80, by + 10, 70 * (1 - Math.max(0, h.cdSkill) / def.skillCd), 6);
-      ctx.fillStyle = g.ult >= 100 ? "#ffd36a" : "#fff";
-      ctx.fillText(`L ${g.ult >= 100 ? def.ultName + "!" : "Ultimate"}`, bx + 170, by + 4);
-      ctx.fillStyle = "#333";
-      ctx.fillRect(bx + 170, by + 10, 136, 6);
+      ctx.fillText(`J · ${def.primaryName}`, bx, by + 4);
+      ctx.fillText(`K · ${def.skillName}`, bx + 180, by + 4);
+      ctx.fillText(`L · ${def.ultName}`, bx + 390, by + 4);
+      ctx.fillStyle = "#9fe3ff";
+      ctx.fillText("Shift · Dash", bx, by + 24);
+      ctx.fillText(h.cdSkill > 0 ? `${Math.ceil(h.cdSkill)}s cooldown` : "Ready", bx + 180, by + 24);
       ctx.fillStyle = g.ult >= 100 ? "#ffd36a" : "#c27aff";
-      ctx.fillRect(bx + 170, by + 10, 136 * (g.ult / 100), 6);
+      ctx.fillText(g.ult >= 100 ? "Ready" : `${Math.floor(g.ult)}% charged`, bx + 390, by + 24);
+      const status = g.shrink > 0 ? `TINY · ${g.shrink.toFixed(1)}s` : g.invisible > 0 ? `INVISIBLE · ${g.invisible.toFixed(1)}s` :
+        decoys.length > 0 ? `${decoys.length} ILLUSIONS` : g.active === 0 ? `${hidden.length} hidden supplies` : "";
+      ctx.fillStyle = "#ffd36a";
+      ctx.fillText(status, bx + 580, by + 24);
     }
+
     // Grimoire: book icon, new-entry toast, and the open book.
     {
       const bx2 = W - 150;
@@ -1676,6 +1741,18 @@ export function createBrawl(
       return;
     }
     drawZones();
+    for (const p of portals) {
+      ctx.save(); ctx.strokeStyle = "#ffd36a"; ctx.lineWidth = 6;
+      ctx.globalAlpha = Math.min(1, p.t * 2);
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, 28, 52, g.time * 2, 0, TAU); ctx.stroke(); ctx.restore();
+    }
+    for (const d of decoys) {
+      ctx.save(); ctx.globalAlpha = 0.45;
+      drawFigure(ctx, 2, d.x, d.y, 0.46, g.aim, true, false, g.time);
+      ctx.restore();
+      ctx.fillStyle = "#ff8fe8"; ctx.textAlign = "center"; ctx.font = "12px Trebuchet MS";
+      ctx.fillText(`Illusion · ${Math.ceil(d.t)}s`, d.x, d.y - 65);
+    }
     for (const k of pickups) {
       ctx.save();
       ctx.translate(k.x, k.y + Math.sin(g.time * 6 + k.x) * 3);
@@ -1747,6 +1824,8 @@ export function createBrawl(
         ctx.translate(g.px, g.py + 18);
         ctx.scale(g.dashT > 0 ? 1.3 : 1 / sq, sq);
         ctx.translate(-g.px, -g.py - 18);
+        if (g.invisible > 0) ctx.globalAlpha = 0.22;
+        if (g.shrink > 0) { ctx.translate(g.px, g.py); ctx.scale(0.45, 0.45); ctx.translate(-g.px, -g.py); }
         drawHero(
           ctx,
           g.active,
@@ -1755,7 +1834,7 @@ export function createBrawl(
           g.aim,
           g.time,
           g.invuln > 0 && Math.floor(g.time * 20) % 2 === 0,
-          g.spin > 0,
+          false,
           g.swing,
           g,
         );
@@ -1777,6 +1856,12 @@ export function createBrawl(
       ctx.shadowBlur = 0;
       ctx.lineCap = "butt";
     }
+    if (cast?.ultimate && cast.hero === 0) {
+      ctx.save(); ctx.strokeStyle = "#ffd36a"; ctx.lineWidth = 8;
+      ctx.globalAlpha = Math.min(1, cast.t * 2);
+      ctx.beginPath(); ctx.arc(cast.x, cast.y, 40 + (1 - cast.t / 1.1) * 950, 0, TAU); ctx.stroke(); ctx.restore();
+    }
+
     drawShots();
     ctx.globalCompositeOperation = "lighter";
     for (const p of parts) {
@@ -1829,7 +1914,7 @@ export function createBrawl(
     if (movie !== null) drawMovie(movie.scenes[movie.i], movie.i, movie.scenes.length, movie.t);
   };
 
-  const mv = { last: 0, camX: 0, zoom: 1, act: new Map<number, { x: number; y: number; s: number; lean: number; kick: number }>() };
+  const mv = { last: 0, camX: 0, zoom: 1 };
   const drawMovie = (sc: Scene | undefined, i: number, n: number, t: number) => {
     if (sc === undefined) return;
     ctx.save();
@@ -1851,60 +1936,11 @@ export function createBrawl(
     drawBackground(ctx, sc.stage, g.decor, g.time);
     ctx.fillStyle = sc.tint;
     ctx.fillRect(-60, -60, W + 120, H + 120);
-    // Actors keep their own position between scenes and walk to their marks.
-    for (const a of sc.actors) {
-      let st = mv.act.get(a.idx);
-      if (st === undefined) {
-        st = { x: a.x < W / 2 ? -140 : W + 140, y: 0, s: a.s, lean: 0, kick: 0 };
-        mv.act.set(a.idx, st);
-      }
+    if (sc.shake) {
+      const punch = Math.max(0, 1 - Math.abs(t / sc.duration - 0.62) * 9) * 9;
+      ctx.translate(Math.sin(t * 80) * punch, Math.cos(t * 95) * punch * 0.5);
     }
-    const order = [...mv.act.entries()].sort((p, q) => (p[1].s - q[1].s));
-    for (const [idx, st] of order) {
-      const a = sc.actors.find((q) => q.idx === idx);
-      const off = st.x < -100 || st.x > W + 100;
-      let tx: number;
-      let ts: number;
-      if (a === undefined) {
-        tx = st.x < W / 2 ? -160 : W + 160;
-        ts = st.s;
-      } else {
-        const talking = a.idx === sc.who;
-        // Speaker steps forward a touch, listeners step back.
-        tx = a.x + (talking && sc.actors.length > 1 ? (a.face === 1 ? 24 : -24) : 0);
-        ts = a.s * (talking ? 1.08 : sc.actors.length > 1 ? 0.96 : 1);
-      }
-      st.x += (tx - st.x) * ease(2.6);
-      st.s += (ts - st.s) * ease(3);
-      if (a === undefined && off) continue;
-      const m = motionOf(st, st.x, 0, now);
-      // Listeners react when a new line starts.
-      if (a !== undefined && a.idx !== sc.who && t < 0.5) st.kick = Math.max(st.kick, 1 - t * 2);
-      st.kick *= Math.exp(-md * 2);
-      const talking = a !== undefined && a.idx === sc.who;
-      const speed = Math.abs(tx - st.x) * 2.6;
-      const walking = speed > 25;
-      const wob = Math.sin(m.phase * TAU * 2);
-      const celebrate = a?.hop === true ? Math.abs(Math.sin(now * 5 + idx)) : 0;
-      const talkBob = talking && !walking ? Math.sin(now * 7) * 2 + Math.max(0, Math.sin(now * 3.1)) * -4 : 0;
-      const dir = a !== undefined ? a.face : (tx > st.x ? 1 : -1);
-      const lean = (walking ? Math.sign(tx - st.x) * 0.1 : dir * 0.04 * (talking ? 2 : 1)) + (celebrate > 0 ? Math.sin(now * 5 + idx) * 0.08 : 0);
-      st.lean += (lean - st.lean) * ease(8);
-      const y = 250 - celebrate * 36 - st.kick * 8 - Math.abs(wob) * (walking ? 7 : 0) + talkBob;
-      const sq = 1 + (celebrate > 0.7 ? 0.05 : 0) - st.kick * 0.04;
-      ctx.fillStyle = "rgba(0,0,0,0.35)";
-      ctx.beginPath();
-      const sh = 1 - celebrate * 0.2;
-      ctx.ellipse(st.x, 250 + 70 * st.s * 0.68, 40 * st.s * 0.68 * sh, 9 * st.s * 0.68 * sh, 0, 0, TAU);
-      ctx.fill();
-      ctx.save();
-      ctx.translate(st.x, 250 + 70 * st.s * 0.68);
-      ctx.rotate(st.lean);
-      ctx.scale(1 / sq, sq);
-      ctx.translate(0, -(250 + 70 * st.s * 0.68));
-      drawFigure(ctx, idx, 0, y, st.s * 0.68, dir === 1 ? 0 : Math.PI, idx !== 1, Math.sin(now * 1.3 + idx) > 0.96, now, walking ? { speed: 100, phase: m.phase } : undefined);
-      ctx.restore();
-    }
+    drawAction(ctx, sc, t);
     // Soft dip in at the start of each line.
     if (t < 0.3) {
       ctx.fillStyle = `rgba(5,2,10,${0.35 * (1 - t / 0.3)})`;
@@ -1945,7 +1981,7 @@ export function createBrawl(
     ctx.fillStyle = "rgba(255,255,255,0.6)";
     ctx.font = "13px Trebuchet MS, sans-serif";
     ctx.textAlign = "right";
-    ctx.fillText(`${i + 1}/${n}   Click / Space: next   Esc: skip`, W - 24, H - 18);
+    ctx.fillText(`${i + 1}/${n}   Auto-play · Click / Space: next · Esc: skip`, W - 24, H - 18);
   };
 
   const frame = (now: number) => {
@@ -1990,6 +2026,11 @@ export function createBrawl(
     if (g.phase !== "playing" && g.phase !== "paused") {
       return;
     }
+    if (g.phase === "playing" && !bookOpen) {
+      if (event.code === "KeyJ") pendingActions.add("attack");
+      if (event.code === "KeyK") pendingActions.add("skill");
+      if (event.code === "KeyL" || event.code === "Space") pendingActions.add("ultimate");
+    }
     if (event.code === "KeyQ") {
       for (let i = 1; i <= 2; i += 1) {
         const idx = (g.active + i) % 3;
@@ -2017,8 +2058,8 @@ export function createBrawl(
       if (event.button === 0) advanceMovie();
       return;
     }
-    if (event.button === 0) mouse.left = true;
-    if (event.button === 2) mouse.right = true;
+    if (event.button === 0) { mouse.left = true; if (g.phase === "playing" && !bookOpen) pendingActions.add("attack"); }
+    if (event.button === 2) { mouse.right = true; if (g.phase === "playing" && !bookOpen) pendingActions.add("skill"); }
   };
   const onUp = (event: MouseEvent) => {
     if (event.button === 0) mouse.left = false;
@@ -2027,6 +2068,7 @@ export function createBrawl(
   const onMenu = (event: Event) => event.preventDefault();
   const onBlur = () => {
     keys.clear();
+    pendingActions.clear();
     mouse.left = false;
     mouse.right = false;
   };
@@ -2042,6 +2084,17 @@ export function createBrawl(
 
   return {
     start,
+    startSolo(hero) { start("story", hero); },
+    completeChallenge(bonus) {
+      if (soloHero === null || g.phase !== "challenge") return;
+      g.score += Math.max(0, Math.min(1100, Math.floor(Number.isFinite(bonus) ? bonus : 0)));
+      g.ult = Math.max(50, g.ult);
+      heroes[soloHero]!.hp = 100;
+      keys.clear(); pendingActions.clear(); mouse.left = false; mouse.right = false;
+      g.banner = {text: SOLO_STORIES[soloHero].title, sub: `Chapter ${g.stage + 1} · Solo · No hero switching`, t: 2};
+      last = performance.now();
+      setPhase("playing");
+    },
     startPractice(options) {
       start("endless");
       practice = options;
@@ -2058,6 +2111,8 @@ export function createBrawl(
     },
     togglePause: toggle,
     quit() {
+      movie = null;
+      keys.clear(); pendingActions.clear();
       sound.music(false);
       setPhase("title");
     },
