@@ -7,7 +7,8 @@
     "start": "vite preview --host 0.0.0.0",
     "typecheck": "tsrs --noEmit --project tsconfig.json",
     "checks": "bun run typecheck && oxlint",
-    "test": "vitest run --pool threads --maxWorkers 1 --testTimeout 15000"
+    "test": "vitest run --pool threads --maxWorkers 1 --testTimeout 15000",
+    "test:browser": "bun scripts/mini-games.browser.mjs"
   },
   "dependencies": {
     "react": "19.3.1",
@@ -21,6 +22,7 @@
     "@types/react-dom": "19.3.0",
     "@types/three": "0.187.0",
     "oxlint": "1.93.0",
+    "playwright": "1.65.1",
     "tsrs": "0.23.0-ts7.1.0-beta",
     "vite": "8.3.5",
     "vitest": "5.1.0"

@@ -100,3 +100,19 @@ it.each([0, 1, 2] as const)("hero %i unlocks the matching backstory through succ
     expect(s.status).toBe("won");
   }
 });
+
+it("makes the four visible rune tiles clickable and leaves their gaps inactive", async () => {
+  const {runeAt} = await import("./mini-game");
+  for (let i = 0; i < 4; i++) expect(runeAt(240 + i * 170, 165)).toBe(i);
+  expect(runeAt(320, 165)).toBeUndefined();
+  expect(runeAt(240, 240)).toBeUndefined();
+  expect(runeAt(100, 165)).toBeUndefined();
+});
+it("separates identical consecutive rune flashes with a visible blank beat", async () => {
+  const {showingRune} = await import("./mini-game");
+  const s = createMini(2); s.sequence = [0, 0];
+  s.show = 2.4; expect(showingRune(s)).toBe(0);
+  s.show = 1.7; expect(showingRune(s)).toBeUndefined();
+  s.show = 1.5; expect(showingRune(s)).toBe(0);
+  s.show = 0; expect(showingRune(s)).toBeUndefined();
+});

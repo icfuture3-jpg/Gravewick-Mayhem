@@ -13,7 +13,7 @@ export interface MiniState {
 export const MINI_RULES = [
   "WASD/arrows move. Hold J or Space to shine your lantern; walk over revealed lights. K opens a portal toward your mouse (2s cooldown). Gather all 5 lights. Red shadows steal 3 seconds.",
   "Mouse aims · J/click throws · K cycles dynamite/frost/shock. Match each target's numbered gadget. WASD/arrows move. Space shrinks for 2s to dodge the red scanner (5s cooldown). Hit all 6 targets.",
-  "Watch the glowing runes, then repeat their order with 1–4 or the rune buttons. Complete three patterns. A wrong rune costs 3 seconds; K replays the pattern at a 5-second cost.",
+  "Watch the glowing runes. When the lights finish, repeat the order by clicking the tiles/buttons or pressing 1–4. Complete three patterns. A wrong rune costs 3 seconds; K replays the pattern at a 5-second cost.",
 ] as const;
 const sequence = (stage: number, round: number) => Array.from({length: 3 + round}, (_, i) => (stage + i * 3 + round * 2 + Math.floor(i / 2)) % 4);
 export function createMini(hero: HeroId, stage = 0): MiniState {
@@ -74,7 +74,7 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
     if (input.skill && s.show === 0) {s.time -= 5; s.index = 0; s.show = s.sequence.length * 0.8 + 0.8; s.message = "Watch the mirrors again. −5s";}
     else if (input.rune !== undefined && !showing) {
       if (input.rune === s.sequence[s.index]) {
-        s.index++; s.message = "A true reflection!";
+        s.index++; s.message = `Correct rune ${s.index}/${s.sequence.length}`;
         if (s.index === s.sequence.length) {
           s.progress++; s.index = 0;
           s.message = miniChapter(s.hero, s.stage).memories[s.progress - 1]!;
@@ -93,4 +93,16 @@ export function miniPoint(rect: {left: number; top: number; width: number; heigh
   const scale = Math.min(rect.width / 960, rect.height / 480);
   return {x: Math.max(0, Math.min(960, (clientX - rect.left - (rect.width - 960 * scale) / 2) / scale)),
     y: Math.max(0, Math.min(480, (clientY - rect.top - (rect.height - 480 * scale) / 2) / scale))};
+}
+
+export function runeAt(x: number, y: number): number | undefined {
+  if (y < 100 || y > 230) return undefined;
+  const i = Math.floor((x - 170) / 170);
+  return i >= 0 && i < 4 && x <= 170 + i * 170 + 140 ? i : undefined;
+}
+export function showingRune(s: MiniState): number | undefined {
+  if (s.show <= 0) return undefined;
+  const elapsed = Math.max(0, s.sequence.length * 0.8 + 0.8 - s.show);
+  // Blank the final 0.2s of each beat so repeated identical runes are distinguishable.
+  return elapsed % 0.8 < 0.6 ? s.sequence[Math.floor(elapsed / 0.8)] : undefined;
 }
