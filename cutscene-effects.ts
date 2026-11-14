@@ -16,9 +16,9 @@ export function playCutsceneCues(sound: Sound, action: Action, duration: number,
   for (const cue of cutsceneCues(action, duration)) {
     if (cue.time <= previous || cue.time > time) continue;
     if (cue.kind === "laser") {sound.tone(1500, "sawtooth", 0.18, 0.075, -1400); sound.tone(720, "sine", 0.12, 0.045, -600);}
-    if (cue.kind === "explosion") {sound.noise(0.55, 0.17); sound.tone(100, "sine", 0.55, 0.2, -70);}
-    if (cue.kind === "lightning") sound.noise(0.09, 0.11);
-    if (cue.kind === "thunder") {sound.noise(1.1, 0.11); sound.tone(65, "triangle", 1.2, 0.15, -35);}
+    if (cue.kind === "explosion") sound.sample?.("explosion", 0.7);
+    // The recorded thunder contains the natural crack and rolling tail.
+    if (cue.kind === "thunder") sound.sample?.("thunder", 0.8);
   }
 }
 /** Restrained, non-looping light bursts; reduced motion suppresses flashes. */

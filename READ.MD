@@ -104,4 +104,4 @@ for Pip, and laser magic for Wisp, without changing chapter choreography or mini
 Effects play once per story beat, not continuously while reading. Tales has a Sound toggle
 sharing Mayhem's sound preference; it can also enable browser audio if autoplay is blocked.
 Audio closes on cutscene exit. Lightning uses a restrained tint and bolt; the system reduced
-motion preference suppresses lightning flashes. No recordings or external assets are used.
+motion preference suppresses lightning flashes. Explosion and thunder now use bundled CC0 audio files instead of noise synthesis; credits are in public/audio/CREDITS.md. Lasers remain synthesized.

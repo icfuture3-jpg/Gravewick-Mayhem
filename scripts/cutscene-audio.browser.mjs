@@ -4,7 +4,12 @@ const browser=await chromium.launch({headless:true,args:['--no-sandbox','--enabl
 const page=await browser.newPage({viewport:{width:1280,height:800}});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>{
-  window.audioAudit={tones:0,noise:0,live:0};
+  window.audioAudit={tones:0,noise:0,live:0,samples:0};
+  window.recordedClips=[];
+  const NativeAudio=window.Audio;
+  window.Audio=class extends NativeAudio {
+    constructor(...args){super(...args);window.recordedClips.push(this);this.addEventListener('playing',()=>window.audioAudit.samples++);}
+  };
   const Audio=window.AudioContext;
   window.AudioContext=class extends Audio {
     constructor(...args){super(...args);window.audioAudit.live++;}
@@ -24,14 +29,17 @@ try {
     const before=await audit();
     await click(`Select ${hero}`);
     await page.getByRole('button',{name:'Continue story',exact:true}).waitFor();
+    await page.waitForFunction(()=>window.recordedClips.filter(a=>a.src).every(a=>a.readyState>=3));
     await page.clock.runFor(7500);
+    await new Promise(resolve=>setTimeout(resolve,200));
     const after=await audit();
-    assert.ok(after.tones>before.tones,`${hero}: synthesized audio`);
-    if(hero!=='Wisp') assert.ok(after.noise>before.noise,`${hero}: crack/blast noise`);
-    assert.equal(after.live,1);
+    if(hero==='Wisp') {assert.ok(after.tones>before.tones);assert.equal(after.live,1);}
+    else {assert.ok(after.samples>before.samples,`${hero}: real recording plays`);assert.equal(after.noise,before.noise,'No static synthesis');}
+    assert.equal(await page.evaluate(()=>window.recordedClips.filter(a=>a.src).every(a=>a.error===null)),true);
     await page.clock.runFor(8000);assert.deepEqual(await audit(),after,'No repeating sounds while reading');
     await click('Back to Gravewick Tales');assert.equal((await audit()).live,0);
-    console.log(`PASS ${hero}: timed audio nodes, no loop, context closes`);
+    assert.equal(await page.evaluate(()=>window.recordedClips.every(a=>a.paused)),true);
+    console.log(`PASS ${hero}: recorded/synthesized cues, no loop, all playback stops`);
   }
   await click('Select Pip');await page.getByRole('button',{name:'Continue story',exact:true}).waitFor();
   await click('Sound: on');const muted=await audit();
