@@ -113,7 +113,7 @@ export function GameHud({ board }: { board: BoardApi }) {
       } else if (phase === "over" || phase === "victory") {
         boardRef.current.view(summary.mode);
       }
-    });
+    }, setMuted);
     brawlRef.current = brawl;
     return () => {
       brawl.destroy();
