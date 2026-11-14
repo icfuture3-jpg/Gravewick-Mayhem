@@ -7,7 +7,7 @@ function setup() {
   vi.stubGlobal("SpeechSynthesisUtterance", class {text: string; constructor(text: string) {this.text = text;}});
   return {speak, cancel};
 }
-it("speaks narrator then hero in distinct spooky-cartoon styles", () => {
+it("speaks narrator then hero in distinct upbeat-cartoon styles", () => {
   const {speak} = setup(); speakScene({caption: "Into the crypt", who: 1, text: "Gadget time!"});
   expect(speak.mock.calls[0]![0]).toMatchObject({text: "Into the crypt", pitch: VOICE_STYLES[3].pitch});
   expect(voicePlaying()).toBe(true);
@@ -25,4 +25,15 @@ it("global sound mute stops voices and a missing speech engine is harmless", () 
   const {speak} = setup(); muteVoices(true); speakScene({who: -1, text: "Muted"}); expect(speak).not.toHaveBeenCalled();
   vi.stubGlobal("window", {}); expect(voicesAvailable()).toBe(false);
   expect(() => speakScene({who: 0, text: "No voice"})).not.toThrow();
+});
+
+it("keeps every speaker brighter and brisker than the spooky delivery", () => {
+  const {speak} = setup();
+  for (const who of [0, 1, 2, -1]) {
+    speakScene({who, text: "Well, that was a spectacularly silly idea!"});
+    expect(speak.mock.lastCall![0].pitch).toBeGreaterThanOrEqual(1);
+    expect(speak.mock.lastCall![0].rate).toBeGreaterThanOrEqual(1);
+    expect(speak.mock.lastCall![0].rate).toBeLessThanOrEqual(1.2);
+  }
+  expect(new Set(VOICE_STYLES.map((s) => s.pitch)).size).toBe(4);
 });

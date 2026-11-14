@@ -1,9 +1,9 @@
 // Device-provided speech, not recorded voice acting. No credentials or external audio assets.
 export const VOICE_STYLES = [
-  {name: "Grimble", pitch: 0.65, rate: 0.85},
-  {name: "Pip", pitch: 1.45, rate: 1.12},
-  {name: "Wisp", pitch: 1.1, rate: 0.94},
-  {name: "Narrator", pitch: 0.8, rate: 0.86},
+  {name: "Grimble", pitch: 1.05, rate: 1.04},
+  {name: "Pip", pitch: 1.6, rate: 1.2},
+  {name: "Wisp", pitch: 1.3, rate: 1.1},
+  {name: "Narrator", pitch: 1.15, rate: 1.08},
 ] as const;
 export interface VoiceLine {who: number; text: string}
 let enabled = true;
