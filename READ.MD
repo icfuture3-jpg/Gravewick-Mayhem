@@ -51,3 +51,15 @@ Switching heroes ends shrinking/invisibility so those personal powers cannot tra
 ## Action cutscenes
 
 Story battles now have automatically advancing, skippable action sequences: the trio enters each stage through lantern portals, Pip shrinks and launches a gadget, and Wisp vanishes behind firing mirror doubles. Boss arrivals get a team charge; each boss crossing half health triggers one counterattack sequence. Each defeated boss gets a finishing move and victory celebration, including the final portal sealing. Gameplay, enemy attacks, health, projectiles and cooldowns pause for the movies, then resume from their existing state. Click/Space advances a beat; Esc skips the current sequence. Endless and Practice remain uninterrupted. These use the existing animated models with cinematic magic, explosions, motion lines, camera shake and procedural sound cues—not pre-rendered video or recorded voices.
+
+## Solo stories and mini-games
+
+Choose **Hero stories & mini-games** on the title screen, then Grimble, Pip or Wisp. All three are available immediately. **Play [hero]'s story** starts a three-chapter solo run with that hero's own origin, chapter, boss and ending cutscenes. These are new original backstories for this game. Team story + training remains a separate option. Solo stories skip training, disable hero switching, and end when the selected hero falls. They use the existing three arenas and bosses with 30% lower enemy health and incoming damage, 15 health restored at wave boundaries, and a full heal before each chapter's battle.
+
+Each hero has a distinct mini-game, available standalone from the same picker and before each solo chapter's battle:
+
+- **Grimble — Lantern Hunt:** move with WASD/arrows, hold J/Space to reveal five lost lights, walk over them to collect, and use K to portal toward the mouse. Avoid moving shadows that steal time.
+- **Pip — Gadget Gallery:** move and aim with the mouse; J/click throws a gadget, K cycles dynamite/frost/shock. Match each numbered target to the correct gadget. Space briefly shrinks Pip to dodge the moving scanner.
+- **Wisp — Mirror Memory:** watch lit runes, then reproduce three increasingly long patterns using 1–4 or the rune buttons. K replays the pattern at a time cost. Later chapters change the patterns.
+
+Mini-games wait for Start, offer pause/resume and retry, pause on window blur, and have clear win/timeout results. A story challenge can be skipped without a bonus, so it cannot block campaign progress. Winning adds a time-based bonus once and Continue to battle resumes the selected hero; battles begin with at least 50% ultimate charge. Standalone mini-games can be replayed or exited at any time. Solo scores and mini-game results are session-only and never mix into team/endless high scores. Full solo runs cannot be saved mid-chapter.

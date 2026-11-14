@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { soloScenes } from "./solo-story";
 import { createBrawl } from "./engine";
 import { drawHero, drawEnemy } from "./art";
 import { drawAction } from "./cinematic";
@@ -29,7 +30,7 @@ function setup() {
     const down = new Event("keydown"); Object.assign(down, {code}); events.dispatchEvent(down); tick();
     const up = new Event("keyup"); Object.assign(up, {code}); events.dispatchEvent(up);
   };
-  type State = {px: number; py: number; wave: number; stage: number; queue: string[]; ult: number; banner: {t: number}; score: number};
+  type State = {px: number; py: number; wave: number; stage: number; queue: string[]; ult: number; banner: {t: number}; score: number; active: number; invuln: number};
   const state = () => vi.mocked(drawHero).mock.lastCall![9] as State;
   const enemy = () => vi.mocked(drawEnemy).mock.lastCall![10] as {hp: number; max: number; x: number; y: number};
   return {game, tick, key, state, enemy, phase, texts};
@@ -111,5 +112,52 @@ it("keeps endless and practice free of cinematic interruptions", () => {
   s.game.startPractice({hero: 2, enemy: "boogeyman"}); s.tick(5);
   s.enemy().hp = 100; s.tick(5);
   expect(drawAction).not.toHaveBeenCalled();
+  s.game.destroy();
+});
+
+it.each([0, 1, 2] as const)("gives hero %i an isolated solo campaign, chapter challenges and a personal ending", (hero) => {
+  const s = setup(); s.game.startSolo(hero); s.tick();
+  expect(vi.mocked(drawAction).mock.lastCall![1].soloHero).toBe(hero);
+  expect(s.state().active).toBe(hero);
+  s.key("Escape");
+  expect(s.phase.mock.lastCall![0]).toBe("challenge");
+  expect(s.phase.mock.lastCall![1].soloHero).toBe(hero);
+  const before = s.state().wave; s.tick(100); expect(s.state().wave).toBe(before);
+  s.game.completeChallenge(750); s.tick();
+  expect(s.phase.mock.lastCall![0]).toBe("playing");
+  expect(s.state().score).toBe(750);
+  s.game.completeChallenge(750); expect(s.state().score).toBe(750); // one claim per challenge
+  for (const code of ["Digit1", "Digit2", "Digit3", "KeyQ"]) s.key(code);
+  expect(s.state().active).toBe(hero);
+  expect(s.texts.some((t) => t.startsWith("Training "))).toBe(false);
+  for (let stage = 0; stage < 3; stage++) {
+    Object.assign(s.state(), {wave: 4, queue: []}); s.state().banner.t = 0;
+    s.tick();
+    expect(vi.mocked(drawAction).mock.lastCall![1].soloHero).toBe(hero);
+    if (stage < 2) {
+      s.tick(500);
+      expect(s.state().stage).toBe(stage + 1);
+      expect(s.phase.mock.lastCall![0]).toBe("challenge");
+      s.game.completeChallenge(0); s.tick();
+      expect(s.state().active).toBe(hero);
+    } else {
+      s.tick(500);
+      expect(s.phase.mock.lastCall![0]).toBe("victory");
+      expect(s.texts).toContain(soloScenes(hero, 2, "win")[0]!.caption);
+    }
+  }
+  s.game.start("endless"); s.tick();
+  expect(s.phase.mock.lastCall![1].soloHero).toBe(null);
+  s.game.startPractice({hero: 1, enemy: "ghoul"}); s.tick(); s.game.quit();
+  expect(s.phase.mock.lastCall![1]).toMatchObject({soloHero: null, practice: true});
+  s.game.destroy();
+});
+
+it("ends a solo run when its hero dies rather than silently swapping to a teammate", () => {
+  const s = setup(); s.game.startSolo(2); s.tick(); s.key("Escape"); s.game.completeChallenge(0);
+  s.state().banner.t = 0; s.tick(55);
+  s.tick(2200);
+  expect(s.phase.mock.calls.some(([phase]) => phase === "over")).toBe(true);
+  expect(s.state().active).toBe(2);
   s.game.destroy();
 });

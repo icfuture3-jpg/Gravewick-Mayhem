@@ -1,3 +1,6 @@
+import { StorySelect } from "./story-select";
+import { MiniGame } from "./mini-game-view";
+import { SOLO_STORIES, type HeroId } from "./solo-story";
 import { HERO_ABILITIES } from "./hero-abilities";
 import { PRACTICE_ENEMIES, type PracticeEnemy } from "./practice";
 import type { BoardApi } from "./leaderboard";
@@ -9,7 +12,7 @@ import { createBrawl, type Brawl, type Mode, type Phase, type Summary } from "./
 
 const STAGE_LABEL = ["Backyard", "Crypts", "Citadel"];
 
-type Screen = Phase | "grimoire" | "board" | "heroes" | "practice";
+type Screen = Phase | "grimoire" | "board" | "heroes" | "practice" | "stories" | "mini";
 
 const BESTIARY = LORE.map((l) => [l.name, l.tip] as const);
 
@@ -68,6 +71,7 @@ export function GameHud({ board }: { board: BoardApi }) {
   const [info, setInfo] = useState<Summary | null>(null);
   const [practiceHero, setPracticeHero] = useState<0 | 1 | 2>(0);
   const [practiceEnemy, setPracticeEnemy] = useState<PracticeEnemy>("clown");
+  const [miniHero, setMiniHero] = useState<HeroId>(0);
   const [practising, setPractising] = useState(false);
   const [muted, setMuted] = useState(false);
   const [boardMode, setBoardMode] = useState<Mode>("endless");
@@ -101,7 +105,7 @@ export function GameHud({ board }: { board: BoardApi }) {
     const brawl = createBrawl(canvas, (phase, summary) => {
       setScreen(phase);
       setInfo(summary);
-      if (summary.practice) return;
+      if (summary.practice || summary.soloHero !== null) return;
       if ((phase === "over" || phase === "victory") && summary.score > 0) {
         setRows(null);
         setSaved(null);
@@ -122,6 +126,7 @@ export function GameHud({ board }: { board: BoardApi }) {
   }, []);
 
   const begin = (mode: Mode) => { setPractising(false); brawlRef.current?.start(mode); };
+  const beginSolo = (hero: HeroId) => {setPractising(false); brawlRef.current?.startSolo(hero);};
   const beginPractice = () => {
     setPractising(true);
     brawlRef.current?.startPractice({hero: practiceHero, enemy: practiceEnemy});
@@ -146,7 +151,7 @@ export function GameHud({ board }: { board: BoardApi }) {
                 MAYHEM
               </text>
             </svg>
-            <button style={btn} onClick={() => begin("story")}>Story + training</button>
+            <button style={btn} onClick={() => setScreen("stories")}>Hero stories &amp; mini-games</button>
             <button style={btn} onClick={() => begin("endless")}>Endless arena</button>
             <button style={btn} onClick={() => setScreen("practice")}>Practice arena</button>
             <button style={btn} onClick={() => openBoard("endless")}>Local high scores</button>
@@ -157,6 +162,9 @@ export function GameHud({ board }: { board: BoardApi }) {
             </div>
           </div>
         )}
+        {screen === "stories" && <StorySelect onStory={beginSolo} onMini={(hero) => {setMiniHero(hero); setScreen("mini");}} onTeam={() => begin("story")} onBack={() => setScreen("title")} />}
+        {screen === "mini" && <MiniGame key={`mini-${miniHero}`} hero={miniHero} onContinue={() => {}} onExit={() => setScreen("stories")} />}
+        {screen === "challenge" && info?.soloHero !== null && info?.soloHero !== undefined && <MiniGame key={`chapter-${info.soloHero}-${info.stage}`} hero={info.soloHero} stage={info.stage} inStory onContinue={(bonus) => brawlRef.current?.completeChallenge(bonus)} onExit={() => brawlRef.current?.quit()} />}
         {screen === "practice" && (
           <div style={scrim}>
             <h2 style={{...heading, fontSize: 36}}>Practice arena</h2>
@@ -233,15 +241,17 @@ export function GameHud({ board }: { board: BoardApi }) {
         )}
         {(screen === "over" || screen === "victory") && info !== null && (
           <div style={scrim}>
-            <h1 style={heading}>{screen === "victory" ? "Underworld conquered!" : "Heroes down"}</h1>
+            <h1 style={{...heading, fontSize: info.soloHero !== null ? 38 : 56}}>{info.soloHero !== null ? screen === "victory" ? `${HERO_ABILITIES[info.soloHero].name}’s story complete!` : `${HERO_ABILITIES[info.soloHero].name} fell` : screen === "victory" ? "Underworld conquered!" : "Heroes down"}</h1>
+            {info.soloHero !== null && <div>{SOLO_STORIES[info.soloHero].title} · Solo run · Not submitted to team high scores</div>}
             <div style={{ fontSize: 22 }}>Score {info.score}</div>
             <div style={{ fontSize: 16, opacity: 0.85 }}>
               {info.kills} monsters beaten · {info.mode === "story" ? STAGE_LABEL[info.stage] : `Reached wave ${info.wave}`}
             </div>
-            {!info.practice && saved === false && <div role="status">Browser storage is unavailable. Scores last only for this session.</div>}
-            {!info.practice && saved === true && <div role="status">High scores saved on this device.</div>}
-            {!info.practice && <BoardTable rows={rows} mode={info.mode} compact />}
-            <button style={btn} onClick={() => info.practice ? beginPractice() : begin(info.mode)}>Play again</button>
+            {!info.practice && info.soloHero === null && saved === false && <div role="status">Browser storage is unavailable. Scores last only for this session.</div>}
+            {!info.practice && info.soloHero === null && saved === true && <div role="status">High scores saved on this device.</div>}
+            {!info.practice && info.soloHero === null && <BoardTable rows={rows} mode={info.mode} compact />}
+            <button style={btn} onClick={() => info.soloHero !== null ? beginSolo(info.soloHero) : info.practice ? beginPractice() : begin(info.mode)}>Play again</button>
+            <button style={btn} onClick={() => {brawlRef.current?.quit(); setScreen("stories");}}>Choose another hero</button>
             <button style={btn} onClick={() => brawlRef.current?.quit()}>Title</button>
           </div>
         )}

@@ -10,6 +10,7 @@ export interface Actor {
 }
 export interface Scene {
   stage: number;
+  soloHero?: 0 | 1 | 2;
   tint: string;
   caption?: string;
   who: number;

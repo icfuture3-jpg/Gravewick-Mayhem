@@ -1,3 +1,4 @@
+import { soloScenes, SOLO_STORIES, type HeroId } from "./solo-story";
 import { HERO_ABILITIES, GADGETS } from "./hero-abilities";
 import type { PracticeOptions } from "./practice";
 import { LESSONS, advanceLesson, type TutorialAction } from "./tutorial";
@@ -22,7 +23,7 @@ import { INTRO, arrival, bossEntrance, turningPoint, celebration, type Scene } f
 import { drawAction } from "./cinematic";
 
 export type Mode = "story" | "endless";
-export type Phase = "title" | "playing" | "paused" | "over" | "victory";
+export type Phase = "title" | "playing" | "paused" | "over" | "victory" | "challenge";
 export interface Summary {
   score: number;
   kills: number;
@@ -30,9 +31,12 @@ export interface Summary {
   wave: number;
   mode: Mode;
   practice: boolean;
+  soloHero: HeroId | null;
 }
 export interface Brawl {
   start(mode: Mode): void;
+  startSolo(hero: HeroId): void;
+  completeChallenge(bonus: number): void;
   startPractice(options: PracticeOptions): void;
   refill(): void;
   togglePause(): void;
@@ -205,6 +209,7 @@ export function createBrawl(
   let lesson = 0;
   let tutorial = false;
   let practice: PracticeOptions | null = null;
+  let soloHero: HeroId | null = null;
   let cast: {hero: number; ultimate: boolean; t: number; x: number; y: number} | null = null;
   const learn = (action: TutorialAction) => { if (tutorial) lesson = advanceLesson(lesson, action); };
   const keys = new Set<string>();
@@ -293,6 +298,7 @@ export function createBrawl(
     wave: g.wave,
     mode: g.mode,
     practice: practice !== null,
+    soloHero,
   });
 
   const setPhase = (phase: Phase) => {
@@ -307,6 +313,7 @@ export function createBrawl(
   };
 
   const say = (who: number, text: string) => {
+    if (soloHero !== null && who !== soloHero) return;
     g.bark = { text, t: 2.2, who };
   };
 
@@ -351,8 +358,8 @@ export function createBrawl(
       kind,
       x,
       y,
-      hp: def.hp,
-      max: def.hp,
+      hp: def.hp * (soloHero === null ? 1 : 0.7),
+      max: def.hp * (soloHero === null ? 1 : 0.7),
       r: def.r,
       kx: 0,
       ky: 0,
@@ -451,6 +458,7 @@ export function createBrawl(
       return;
     }
     if (g.shrink > 0) dmg *= 0.5;
+    if (soloHero !== null) dmg *= 0.7;
     h.hp = Math.max(0, h.hp - dmg);
     g.invuln = 0.45;
     g.shake = Math.max(g.shake, 9);
@@ -475,7 +483,7 @@ export function createBrawl(
 
   const swapTo = (idx: number) => {
     const h = heroes[idx];
-    if (h === undefined || h.hp <= 0 || idx === g.active) {
+    if (soloHero !== null || h === undefined || h.hp <= 0 || idx === g.active) {
       return;
     }
     g.shrink = 0;
@@ -651,7 +659,7 @@ export function createBrawl(
     g.banner = { text: STAGE_NAMES[stage] ?? "Endless Mayhem", sub: "Stage " + (stage + 1), t: 2.6 };
     g.cuts = [];
     g.cutT = 3;
-    if (g.mode === "story") {
+    if (g.mode === "story" && soloHero === null) {
       const lines = STAGE_CUTS[stage] ?? [];
       g.cuts = lines.map(([idx, text]) => ({ idx, text }));
     }
@@ -659,6 +667,7 @@ export function createBrawl(
 
   const nextWave = () => {
     g.wave += 1;
+    if (soloHero !== null) heal(soloHero, 15);
     g.spawnT = 0.8;
     if (g.mode === "story") {
       if (g.wave <= 3) {
@@ -669,9 +678,9 @@ export function createBrawl(
         g.queue = [boss];
         g.banner = { text: ENEMY[boss].name, sub: "Boss fight", t: 2.4 };
         const [bi, bt] = BOSS_CUTS[g.stage] ?? BOSS_CUTS[0] ?? [0, ""];
-        g.cuts = [{ idx: bi, text: bt }];
+        g.cuts = soloHero === null ? [{ idx: bi, text: bt }] : [];
         g.cutT = 3;
-        playMovie(bossEntrance(g.stage), () => {});
+        playMovie(soloHero === null ? bossEntrance(g.stage) : soloScenes(soloHero, g.stage, "boss"), () => {});
       }
     } else if (g.wave % 6 === 0) {
       const boss = BOSSES[(g.wave / 6 - 1) % 3] ?? "boogeyman";
@@ -723,7 +732,8 @@ export function createBrawl(
     m?.done();
   };
 
-  const start = (mode: Mode) => {
+  const start = (mode: Mode, hero: HeroId | null = null) => {
+    soloHero = hero;
     practice = null;
     movie = null;
     bossTurns.clear();
@@ -733,20 +743,20 @@ export function createBrawl(
     mouse.left = false;
     mouse.right = false;
     g.mode = mode;
-    tutorial = mode === "story";
+    tutorial = mode === "story" && soloHero === null;
     lesson = 0;
     g.score = 0;
     g.kills = 0;
     g.combo = 0;
     g.ult = 0;
-    g.active = 0;
+    g.active = soloHero ?? 0;
     g.px = W / 2;
     g.py = H / 2 + 60;
     g.invuln = 1;
     g.shrink = 0;
     g.invisible = 0;
     g.stageClearT = 0;
-    heroes = HEROES.map(() => ({ hp: 100, cdPrimary: 0, cdSkill: 0 }));
+    heroes = HEROES.map((_, i) => ({ hp: soloHero === null || soloHero === i ? 100 : 0, cdPrimary: 0, cdSkill: 0 }));
     parts = [];
     rings = [];
     pickups = [];
@@ -756,7 +766,10 @@ export function createBrawl(
     sound.music(true);
     say(0, "Let's make some mayhem.");
     setPhase("playing");
-    if (mode === "story") playMovie(INTRO, () => {});
+    if (mode === "story") {
+      if (soloHero === null) playMovie(INTRO, () => {});
+      else playMovie(soloScenes(soloHero, 0, "arrival"), () => setPhase("challenge"));
+    }
   };
 
   const chase = (e: Enemy, speed: number, dt: number, tx: number, ty: number) => {
@@ -1082,7 +1095,7 @@ export function createBrawl(
     if (g.mode === "story" && practice === null && !bossTurns.has(g.stage) &&
       enemies.some((e) => e.boss && e.hp > 0 && e.hp <= e.max / 2)) {
       bossTurns.add(g.stage);
-      playMovie(turningPoint(g.stage), () => {});
+      playMovie(soloHero === null ? turningPoint(g.stage) : soloScenes(soloHero, g.stage, "turn"), () => {});
       return;
     }
     // Input.
@@ -1201,13 +1214,14 @@ export function createBrawl(
       g.stageClearT -= dt;
       if (g.stageClearT <= 0) {
         heroes.forEach((h, i) => {
+          if (soloHero !== null && i !== soloHero) return;
           if (h.hp <= 0) {
             h.hp = 60;
             burst(g.px, g.py, HEROES[i]?.color ?? "#fff", 24, 260);
           } else heal(i, 35);
         });
         startStage(g.stage + 1);
-        playMovie(arrival(g.stage), () => {});
+        playMovie(soloHero === null ? arrival(g.stage) : soloScenes(soloHero, g.stage, "arrival"), () => {if (soloHero !== null) setPhase("challenge");});
       }
     } else if (g.queue.length > 0) {
       g.spawnT -= dt;
@@ -1229,11 +1243,11 @@ export function createBrawl(
         if (g.stage >= 2) {
           sound.music(false);
           g.score += 5000;
-          playMovie(celebration(g.stage), () => setPhase("victory"));
+          playMovie(soloHero === null ? celebration(g.stage) : soloScenes(soloHero, g.stage, "win"), () => setPhase("victory"));
         } else {
-          playMovie(celebration(g.stage), () => { g.stageClearT = 0.05; });
+          playMovie(soloHero === null ? celebration(g.stage) : soloScenes(soloHero, g.stage, "win"), () => { g.stageClearT = 0.05; });
           g.banner = { text: "Stage clear!", sub: "Fallen heroes come back!", t: 3 };
-          g.cuts = [{ idx: g.stage % 3, text: CLEAR_CUTS[g.stage % 3] ?? "" }];
+          g.cuts = soloHero === null ? [{ idx: g.stage % 3, text: CLEAR_CUTS[g.stage % 3] ?? "" }] : [];
           g.cutT = 3;
           g.score += 1000;
         }
@@ -1434,9 +1448,10 @@ export function createBrawl(
     }
     // Hero cards.
     heroes.forEach((h, i) => {
+      if (soloHero !== null && i !== soloHero) return;
       const def = HEROES[i];
       if (def === undefined) return;
-      const x = 14 + i * 150;
+      const x = 14 + (soloHero === null ? i * 150 : 0);
       const y = 12;
       const act = i === g.active;
       ctx.fillStyle = act ? "rgba(20,10,40,0.85)" : "rgba(10,6,20,0.6)";
@@ -1471,7 +1486,7 @@ export function createBrawl(
     ctx.font = "13px Trebuchet MS, sans-serif";
     ctx.fillStyle = "#cbb8ff";
     ctx.fillText(
-      g.mode === "story"
+      soloHero !== null ? `${HEROES[soloHero]!.name} · Chapter ${g.stage + 1} · Wave ${g.wave}/4` : g.mode === "story"
         ? `${STAGE_NAMES[g.stage] ?? ""}  ·  ${g.wave >= 4 ? "Boss" : `Wave ${g.wave}/3`}`
         : `Endless  ·  Wave ${g.wave}`,
       W - 16,
@@ -2069,6 +2084,17 @@ export function createBrawl(
 
   return {
     start,
+    startSolo(hero) { start("story", hero); },
+    completeChallenge(bonus) {
+      if (soloHero === null || g.phase !== "challenge") return;
+      g.score += Math.max(0, Math.min(1100, Math.floor(Number.isFinite(bonus) ? bonus : 0)));
+      g.ult = Math.max(50, g.ult);
+      heroes[soloHero]!.hp = 100;
+      keys.clear(); pendingActions.clear(); mouse.left = false; mouse.right = false;
+      g.banner = {text: SOLO_STORIES[soloHero].title, sub: `Chapter ${g.stage + 1} · Solo · No hero switching`, t: 2};
+      last = performance.now();
+      setPhase("playing");
+    },
     startPractice(options) {
       start("endless");
       practice = options;
@@ -2085,6 +2111,8 @@ export function createBrawl(
     },
     togglePause: toggle,
     quit() {
+      movie = null;
+      keys.clear(); pendingActions.clear();
       sound.music(false);
       setPhase("title");
     },

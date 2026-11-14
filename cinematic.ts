@@ -7,6 +7,7 @@ export function drawAction(ctx: CanvasRenderingContext2D, scene: Scene, time: nu
   const p = Math.min(1, Math.max(0, time / scene.duration));
   const impact = Math.max(0, 1 - Math.abs(p - 0.62) * 7);
   const hero = (idx: number, x: number, y: number, scale = 1, alpha = 1) => {
+    if (scene.soloHero !== undefined && idx !== scene.soloHero) return;
     ctx.save(); ctx.globalAlpha *= alpha;
     drawFigure(ctx, idx, x, y, scale, 0, idx !== 1, false, time,
       {speed: p < 0.6 ? 200 : 0, phase: time * 1.8});
