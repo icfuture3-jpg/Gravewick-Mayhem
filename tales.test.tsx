@@ -32,6 +32,9 @@ it("gives the original game and Gravewick Tales independent main-menu entry poin
   const board = {submit: vi.fn(), view: vi.fn(), listen: vi.fn()};
   const html = renderToStaticMarkup(<GameHud board={board} />);
   expect(html).toContain("Play Gravewick Mayhem");
+  expect(html).toContain("Endless arena");
+  expect(html).not.toContain("Practice arena");
+  expect(html).not.toContain("Start practice");
   expect(html).toContain(">Gravewick Tales</button>");
   expect(html).not.toContain("Hero stories &amp; mini-games");
   expect(board.submit).not.toHaveBeenCalled();

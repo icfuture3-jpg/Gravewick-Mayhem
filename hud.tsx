@@ -2,7 +2,6 @@ import { StorySelect } from "./story-select";
 import { Tales } from "./tales-view";
 import { SOLO_STORIES, type HeroId } from "./solo-story";
 import { HERO_ABILITIES } from "./hero-abilities";
-import { PRACTICE_ENEMIES, type PracticeEnemy } from "./practice";
 import type { BoardApi } from "./leaderboard";
 import { HeroPreview } from "./preview";
 import { LORE } from "./brawl/lore";
@@ -12,7 +11,7 @@ import { createBrawl, type Brawl, type Mode, type Phase, type Summary } from "./
 
 const STAGE_LABEL = ["Backyard", "Crypts", "Citadel"];
 
-type Screen = Phase | "grimoire" | "board" | "heroes" | "practice" | "stories" | "mini";
+type Screen = Phase | "grimoire" | "board" | "heroes" | "stories" | "mini";
 
 const BESTIARY = LORE.map((l) => [l.name, l.tip] as const);
 
@@ -69,10 +68,7 @@ export function GameHud({ board }: { board: BoardApi }) {
   const brawlRef = useRef<Brawl | null>(null);
   const [screen, setScreen] = useState<Screen>("title");
   const [info, setInfo] = useState<Summary | null>(null);
-  const [practiceHero, setPracticeHero] = useState<0 | 1 | 2>(0);
-  const [practiceEnemy, setPracticeEnemy] = useState<PracticeEnemy>("clown");
   const [miniHero, setMiniHero] = useState<HeroId>(0);
-  const [practising, setPractising] = useState(false);
   const [muted, setMuted] = useState(false);
   const [boardMode, setBoardMode] = useState<Mode>("endless");
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -125,12 +121,8 @@ export function GameHud({ board }: { board: BoardApi }) {
     };
   }, []);
 
-  const begin = (mode: Mode) => { setPractising(false); brawlRef.current?.start(mode); };
-  const beginTale = (hero: HeroId) => {setPractising(false); setMiniHero(hero); setScreen("mini");};
-  const beginPractice = () => {
-    setPractising(true);
-    brawlRef.current?.startPractice({hero: practiceHero, enemy: practiceEnemy});
-  };
+  const begin = (mode: Mode) => { brawlRef.current?.start(mode); };
+  const beginTale = (hero: HeroId) => { setMiniHero(hero); setScreen("mini");};
 
   return (
     <div style={root}>
@@ -154,7 +146,6 @@ export function GameHud({ board }: { board: BoardApi }) {
             <button style={btn} onClick={() => begin("story")}>Play Gravewick Mayhem</button>
             <button style={{...btn, background: "linear-gradient(#76612b,#433018)"}} onClick={() => setScreen("stories")}>Gravewick Tales</button>
             <button style={btn} onClick={() => begin("endless")}>Endless arena</button>
-            <button style={btn} onClick={() => setScreen("practice")}>Practice arena</button>
             <button style={btn} onClick={() => openBoard("endless")}>Local high scores</button>
             <button style={btn} onClick={() => setScreen("grimoire")}>Grimoire</button>
             <button style={btn} onClick={() => setScreen("heroes")}>Meet the heroes</button>
@@ -165,21 +156,6 @@ export function GameHud({ board }: { board: BoardApi }) {
         )}
         {screen === "stories" && <StorySelect onStory={beginTale} onBack={() => setScreen("title")} />}
         {screen === "mini" && <Tales key={`tale-${miniHero}`} hero={miniHero} onExit={() => setScreen("stories")} />}
-        {screen === "practice" && (
-          <div style={scrim}>
-            <h2 style={{...heading, fontSize: 36}}>Practice arena</h2>
-            <label>Hero <select value={practiceHero} onChange={(e) => setPracticeHero(Number(e.target.value) as 0 | 1 | 2)}>
-              {HERO_ABILITIES.map(({name}, index) => <option key={name} value={index}>{name}</option>)}
-            </select></label>
-            <label>Enemy <select value={practiceEnemy} onChange={(e) => setPracticeEnemy(e.target.value as PracticeEnemy)}>
-              {PRACTICE_ENEMIES.map((kind) => <option key={kind} value={kind}>{LORE.find((l) => l.kind === kind)?.name}</option>)}
-            </select></label>
-            <p>All heroes available · Ultimate starts full · Defeated enemies respawn · No high scores</p>
-            <button style={btn} onClick={beginPractice}>Start practice</button>
-            <button style={btn} onClick={() => setScreen("title")}>Back</button>
-          </div>
-        )}
-        {practising && screen === "playing" && <button style={{position: "absolute", top: 80, left: 16, zIndex: 60}} onClick={() => brawlRef.current?.refill()}>Refill health, skills &amp; ultimate</button>}
         {screen === "heroes" && <HeroPreview onBack={() => setScreen("title")} onMini={beginTale} />}
         {screen === "grimoire" && (
           <div style={{ ...scrim, justifyContent: "flex-start", padding: "20px 40px", overflow: "auto", gap: 6 }}>
@@ -250,7 +226,7 @@ export function GameHud({ board }: { board: BoardApi }) {
             {!info.practice && info.soloHero === null && saved === false && <div role="status">Browser storage is unavailable. Scores last only for this session.</div>}
             {!info.practice && info.soloHero === null && saved === true && <div role="status">High scores saved on this device.</div>}
             {!info.practice && info.soloHero === null && <BoardTable rows={rows} mode={info.mode} compact />}
-            <button style={btn} onClick={() => info.practice ? beginPractice() : begin(info.mode)}>Play again</button>
+            <button style={btn} onClick={() => begin(info.mode)}>Play again</button>
             <button style={btn} onClick={() => {brawlRef.current?.quit(); setScreen("stories");}}>Gravewick Tales</button>
             <button style={btn} onClick={() => brawlRef.current?.quit()}>Title</button>
           </div>
