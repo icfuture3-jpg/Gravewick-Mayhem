@@ -102,6 +102,7 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     for (const spark of s.sparks) if (!spark.taken) {
       ctx.fillStyle = spark.found ? "#ffd36a" : "#50405e";
       ctx.beginPath(); ctx.arc(spark.x, spark.y, spark.found ? 14 : 5, 0, Math.PI * 2); ctx.fill();
+      if (spark.found) {ctx.strokeStyle = "#ffdf88"; ctx.lineWidth = 2; ctx.strokeRect(spark.x - 17, spark.y - 17, 34, 34);}
     }
     ctx.strokeStyle = "rgba(255,211,106,0.3)"; ctx.beginPath(); ctx.arc(s.px, s.py, 120, 0, Math.PI * 2); ctx.stroke();
     for (let i = 0; i < 3; i++) {ctx.fillStyle = "#b52f68"; ctx.beginPath(); ctx.arc(180 + i * 270, 240 + Math.sin(s.elapsed * 1.5 + i * 2) * 120, 25, 0, Math.PI * 2); ctx.fill();}
@@ -109,9 +110,11 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     for (let i = 0; i < 6; i++) {ctx.fillStyle = "#6b4c34"; ctx.fillRect(95 + i * 140, 70, 70, 150); ctx.fillStyle = "#a47d4b"; ctx.fillRect(90 + i * 140, 210, 80, 10);}
     ctx.fillStyle = "rgba(255,70,70,0.4)"; ctx.fillRect(90 + (s.elapsed * 65) % 780 - 4, 70, 8, 395);
     for (const target of s.targets) if (!target.hit) {
-      ctx.fillStyle = GADGETS[target.kind]!.color; ctx.beginPath(); ctx.arc(target.x, target.y, 26, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#10091e"; ctx.font = "bold 20px Trebuchet MS"; ctx.textAlign = "center"; ctx.fillText(String(target.kind + 1), target.x, target.y + 7);
+      ctx.fillStyle = GADGETS[target.kind]!.color; ctx.fillRect(target.x - 24, target.y - 20, 48, 40);
+      ctx.fillStyle = "#171421"; ctx.beginPath(); ctx.arc(target.x - 14, target.y + 24, 6, 0, Math.PI * 2); ctx.arc(target.x + 14, target.y + 24, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffffff"; ctx.font = "bold 20px Trebuchet MS"; ctx.textAlign = "center"; ctx.fillText(String(target.kind + 1), target.x, target.y + 7);
     }
+    for (const target of s.targets) if (target.hit) {ctx.fillStyle = "#b5df72"; ctx.fillRect(target.x - 22, target.y - 18, 44, 36); ctx.fillStyle = "#131c13"; ctx.font = "bold 16px Trebuchet MS"; ctx.textAlign = "center"; ctx.fillText(s.stage === 2 ? "OFF" : "Fixed", target.x, target.y + 6);}
     for (const shot of s.shots) {ctx.fillStyle = GADGETS[shot.kind]!.color; ctx.beginPath(); ctx.arc(shot.x, shot.y, 9, 0, Math.PI * 2); ctx.fill();}
   } else {
     for (let i = 0; i < 10; i++) {ctx.fillStyle = "#513d64"; ctx.fillRect(i * 100, 40, 70, 35); ctx.fillStyle = "#9c77b3"; ctx.fillRect(i * 100 + 5, 43, 8, 28);}
@@ -124,6 +127,10 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     }
     ctx.fillStyle = "#ffd36a"; ctx.font = "bold 22px Trebuchet MS"; ctx.textAlign = "center";
     ctx.fillText(s.show > 0 ? "WATCH THE PATTERN" : `YOUR TURN · ${s.index}/${s.sequence.length}`, 480, 280);
+  }
+  if (s.hero === 2 && s.progress > 0) {
+    ctx.fillStyle = "#eee1ff"; ctx.fillRect(570, 300, 60, 42); ctx.strokeStyle = "#b86fe9"; ctx.lineWidth = 3; ctx.strokeRect(570, 300, 60, 42);
+    for (let i = 0; i < s.progress; i++) {ctx.beginPath(); ctx.moveTo(578, 310 + i * 9); ctx.lineTo(620, 310 + i * 9); ctx.stroke();}
   }
   ctx.save(); if (s.tiny > 0) {ctx.translate(s.px, s.py); ctx.scale(0.45, 0.45); ctx.translate(-s.px, -s.py);}
   drawHero(ctx, s.hero, s.px, s.py, Math.atan2(aimY - s.py, aimX - s.px), s.elapsed, s.invuln > 0, false, 0.2, s); ctx.restore();

@@ -3,7 +3,7 @@ import { startTale, advanceTale, taleScenes } from "./tales";
 import { MiniGame } from "./mini-game-view";
 import { HERO_ABILITIES } from "./hero-abilities";
 import { SOLO_STORIES, type HeroId } from "./solo-story";
-import { drawAction } from "./cinematic";
+import { drawTaleAction } from "./tale-actions";
 import type { Scene } from "./movie";
 
 const button: CSSProperties = {padding: "9px 22px", background: "#694090", border: "2px solid #c3a1ed", borderRadius: 8, color: "white", cursor: "pointer", font: "bold 16px Trebuchet MS"};
@@ -24,12 +24,13 @@ export function Tales({hero, onExit}: {hero: HeroId; onExit: () => void}) {
     <small>Separate from Gravewick Mayhem · Session-only progress</small>
   </div>;
   return <TaleCutscene key={`${tale.chapter}-${tale.phase}`} scenes={taleScenes(tale)}
+    hero={hero} chapter={tale.chapter} complete={tale.phase === "outro"}
     label={`Gravewick Tales · ${HERO_ABILITIES[hero].name} · Chapter ${tale.chapter + 1}/3`}
     nextLabel={tale.phase === "intro" ? "Play this memory" : tale.chapter === 2 ? "Finish tale" : "Next chapter"}
     onNext={() => setTale((current) => advanceTale(current, "continue"))} onExit={onExit} />;
 }
 
-function TaleCutscene({scenes, label, nextLabel, onNext, onExit}: {scenes: Scene[]; label: string; nextLabel: string; onNext: () => void; onExit: () => void}) {
+function TaleCutscene({scenes, hero, chapter, complete, label, nextLabel, onNext, onExit}: {scenes: Scene[]; hero: HeroId; chapter: number; complete: boolean; label: string; nextLabel: string; onNext: () => void; onExit: () => void}) {
   const [picked, setPicked] = useState(0);
   const canvas = useRef<HTMLCanvasElement>(null);
   const scene = scenes[picked]!;
@@ -38,10 +39,10 @@ function TaleCutscene({scenes, label, nextLabel, onNext, onExit}: {scenes: Scene
     const start = performance.now(); let raf = 0;
     const frame = (now: number) => {
       ctx.clearRect(0, 0, 960, 360); ctx.fillStyle = "#211531"; ctx.fillRect(0, 0, 960, 360);
-      drawAction(ctx, scene, Math.min(scene.duration - 0.01, (now - start) / 1000));
+      drawTaleAction(ctx, hero, chapter, (now - start) / 1000, complete);
       raf = requestAnimationFrame(frame);
     }; raf = requestAnimationFrame(frame); return () => cancelAnimationFrame(raf);
-  }, [scene]);
+  }, [scene, hero, chapter, complete]);
   return <div style={panel}>
     <h2 style={{margin: 0, color: "#ffd36a"}}>{label}</h2>
     <h3 style={{margin: 0}}>{scene.caption}</h3>
