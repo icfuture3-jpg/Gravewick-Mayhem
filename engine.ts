@@ -1,3 +1,4 @@
+import { playCutsceneCues } from "./cutscene-effects";
 import { soloScenes, SOLO_STORIES, type HeroId } from "./solo-story";
 import { HERO_ABILITIES, GADGETS } from "./hero-abilities";
 import type { PracticeOptions } from "./practice";
@@ -1071,8 +1072,10 @@ export function createBrawl(
     g.time += dt;
     if (bookOpen && g.phase === "playing") return;
     if (movie !== null) {
+      const previous = movie.t;
       movie.t += dt;
       const scene = movie.scenes[movie.i];
+      if (scene) playCutsceneCues(sound, scene.action, scene.duration, previous, movie.t);
       if (scene !== undefined && movie.t >= scene.duration) {
         movie.i += 1;
         movie.t = 0;

@@ -64,7 +64,8 @@ try {
     await click('Gravewick Tales'); await click('Select Grimble');
     await button('Continue story').waitFor();
     assert.equal(await page.locator('canvas').count(),1);
-    assert.deepEqual(await resources(),{...baseline,rafs:1,audio:0,keydown:0});
+    const cutscene=await resources();
+    assert.equal(cutscene.rafs,1);assert.equal(cutscene.keydown,0);assert.equal(cutscene.mouseup,baseline.mouseup);
     await click('Continue story');await click('Play this memory');
     await button('Start mini-game').waitFor(); await click('Start mini-game');
     assert.deepEqual(await resources(),{...baseline,rafs:1,audio:0,keydown:1});

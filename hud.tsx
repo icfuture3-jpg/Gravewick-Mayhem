@@ -165,7 +165,7 @@ export function GameHud({ board }: { board: BoardApi }) {
           </div>
         )}
         {screen === "stories" && <StorySelect onStory={beginTale} onBack={() => setScreen("title")} />}
-        {screen === "mini" && <Suspense fallback={<RuntimeLoading />}><Tales key={`tale-${miniHero}`} hero={miniHero} onExit={() => setScreen("stories")} /></Suspense>}
+        {screen === "mini" && <Suspense fallback={<RuntimeLoading />}><Tales key={`tale-${miniHero}`} hero={miniHero} muted={muted} onMuted={setMuted} onExit={() => setScreen("stories")} /></Suspense>}
         {screen === "practice" && (
           <div style={scrim}>
             <h2 style={{...heading, fontSize: 36}}>Practice arena</h2>

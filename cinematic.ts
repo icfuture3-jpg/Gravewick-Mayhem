@@ -1,3 +1,4 @@
+import { drawCutsceneEffects } from "./cutscene-effects";
 import { drawFigure } from "./heroes";
 import { drawEnemy, TAU } from "./art";
 import type { Scene } from "./movie";
@@ -85,4 +86,6 @@ export function drawAction(ctx: CanvasRenderingContext2D, scene: Scene, time: nu
     }
   }
   ctx.restore();
+  drawCutsceneEffects(ctx, scene.action, scene.duration, time, 960, 540,
+    typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
 }

@@ -95,3 +95,13 @@ this separation does not yet introduce on-demand character models or mid-Tale sa
 With the local app running, `bun scripts/runtime.browser.mjs` checks lazy runtime loading,
 repeated Mayhem/Tales switches, listener/animation/audio cleanup, mute retention, pause/resume,
 and campaign/practice launches using normal browser inputs.
+
+## Cutscene sound and lightning
+
+Mayhem action scenes now sync laser zaps, gadget explosions, lightning cracks and delayed
+thunder to their animation beats. Tales adds lightning/thunder for Grimble, gadget blasts
+for Pip, and laser magic for Wisp, without changing chapter choreography or mini-game rules.
+Effects play once per story beat, not continuously while reading. Tales has a Sound toggle
+sharing Mayhem's sound preference; it can also enable browser audio if autoplay is blocked.
+Audio closes on cutscene exit. Lightning uses a restrained tint and bolt; the system reduced
+motion preference suppresses lightning flashes. No recordings or external assets are used.
