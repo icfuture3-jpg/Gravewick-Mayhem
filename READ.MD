@@ -34,10 +34,6 @@ Simulation, art, and audio live in `engine.ts`, `art.ts`, `heroes.ts`, and `audi
 
 Story mode begins with five interactive training prompts before enemies spawn. Complete movement, attack, skill, swap and dash actions, or press T to skip. Endless mode starts without training. Heroes use run clips when available and mirror toward their aim; ranged enemies display a short dashed warning before firing.
 
-## Practice arena
-
-Choose Practice arena from the title, pick any of the three heroes and any of the seven Grimoire enemies (including each boss), then Start practice. All heroes remain switchable with Q/1–3. Ultimates start full; use the on-screen refill button to restore health, skill cooldowns and ultimate charge. Defeated opponents respawn; boss summons and slime splitting remain enabled. Practice never submits high scores. Pause and Quit to title to change the matchup.
-
 ## Hero powers
 
 The Meet the Heroes screen, Grimoire, and in-game ability bar share the same move descriptions:
@@ -46,17 +42,17 @@ The Meet the Heroes screen, Grimoire, and in-game ability bar share the same mov
 - **Pip:** J is a heavy ham whack. K picks an unpredictable bouncing dynamite, frost, or shock gadget (damage, non-boss freeze, or strong knockback). L shrinks him for six seconds with a smaller collision radius, 50% faster movement, and half incoming damage—not invulnerability.
 - **Wisp:** J fires magic from her floating spellbook. K turns her invisible for five seconds: enemies stop tracking her, but existing projectiles and hazards can still hurt. J or L ends invisibility. L creates two six-second illusions that attract enemies, absorb attacks (three hits each), and fire weaker bolts.
 
-Switching heroes ends shrinking/invisibility so those personal powers cannot transfer. Illusions remain until destroyed or expired. Hidden supplies reset each stage/run and become normal collectible health pickups once revealed. Practice starts with a full ultimate; Refill restores health, cooldowns, and ultimate charge for repeated ability checks.
+Switching heroes ends shrinking/invisibility so those personal powers cannot transfer. Illusions remain until destroyed or expired. Hidden supplies reset each stage/run and become normal collectible health pickups once revealed.
 
 ## Action cutscenes
 
-Story battles now have automatically advancing, skippable action sequences: the trio enters each stage through lantern portals, Pip shrinks and launches a gadget, and Wisp vanishes behind firing mirror doubles. Boss arrivals get a team charge; each boss crossing half health triggers one counterattack sequence. Each defeated boss gets a finishing move and victory celebration, including the final portal sealing. Gameplay, enemy attacks, health, projectiles and cooldowns pause for the movies, then resume from their existing state. Click/Space advances a beat; Esc skips the current sequence. Endless and Practice remain uninterrupted. These use the existing animated models with cinematic magic, explosions, motion lines, camera shake and procedural sound cues—not pre-rendered video or recorded voices.
+Story battles now have automatically advancing, skippable action sequences: the trio enters each stage through lantern portals, Pip shrinks and launches a gadget, and Wisp vanishes behind firing mirror doubles. Boss arrivals get a team charge; each boss crossing half health triggers one counterattack sequence. Each defeated boss gets a finishing move and victory celebration, including the final portal sealing. Gameplay, enemy attacks, health, projectiles and cooldowns pause for the movies, then resume from their existing state. Click/Space advances a beat; Esc skips the current sequence. Endless remains uninterrupted. These use the existing animated models with cinematic magic, explosions, motion lines, camera shake and procedural sound cues—not pre-rendered video or recorded voices.
 
 ## Gravewick Tales — separate personal story mini-games
 
 The title screen has two distinct entries:
 
-- **Play Gravewick Mayhem** starts the original team campaign directly. Its arena combat, training, hero switching, action cutscenes and high scores are unchanged. Endless and Practice remain separate buttons.
+- **Play Gravewick Mayhem** starts the original team campaign directly. Its arena combat, training, hero switching, action cutscenes and high scores are unchanged. Endless remains a separate button.
 - **Gravewick Tales** opens a separate character picker. Click Grimble, Pip or Wisp's animated model (or their Play tale button) to begin that character's own story. Meet the Heroes also links to the selected character's Gravewick Tale.
 
 Each Tale contains three chapters: an animated backstory scene, a personal mini-game memory, and a chapter conclusion. Complete all three to see the character's ending. Tales never starts the arena brawler, offers no Continue/Skip to battle controls, and does not affect Mayhem health, waves or high scores. Cutscenes wait for Continue so the story can be read at your pace. A failed memory can be retried or exited; winning offers Continue tale. The ending offers Replay this tale or Choose another character.
@@ -82,7 +78,7 @@ During mini-games, revealed sparks gain lantern frames, Pip's targets become toy
 ## Runtime ownership
 
 The persistent React shell owns navigation, sound preference and local scores. Mayhem and
-Tales are separate lazy-loaded bundles. Mayhem mounts only for a campaign, endless or practice
+Tales are separate lazy-loaded bundles. Mayhem mounts only for a campaign or endless
 session; its canvas, global input listeners, animation frame and audio context are destroyed
 on exit. Pause/resume keeps the existing session mounted. Sound preference, including the M
 shortcut, survives returning to the menu and starting another run.
@@ -94,7 +90,7 @@ this separation does not yet introduce on-demand character models or mid-Tale sa
 
 With the local app running, `bun scripts/runtime.browser.mjs` checks lazy runtime loading,
 repeated Mayhem/Tales switches, listener/animation/audio cleanup, mute retention, pause/resume,
-and campaign/practice launches using normal browser inputs.
+and campaign launches using normal browser inputs.
 
 ## Cutscene sound and lightning
 

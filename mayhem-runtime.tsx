@@ -1,8 +1,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { createBrawl, type Brawl, type Mode, type Phase, type Summary } from "./engine";
-import type { PracticeOptions } from "./practice";
 
-export interface MayhemSession {mode: Mode; practice?: PracticeOptions}
+export interface MayhemSession {mode: Mode}
 
 /** The canvas, input listeners, animation loop and audio belong to one Mayhem run. */
 export default function MayhemRuntime({session, muted, onMuted, onPhase, brawlRef}: {
@@ -20,8 +19,7 @@ export default function MayhemRuntime({session, muted, onMuted, onPhase, brawlRe
     const brawl = createBrawl(canvas.current!, onPhase, onMuted);
     brawlRef.current = brawl;
     brawl.setMuted(mutedRef.current);
-    if (session.practice) brawl.startPractice(session.practice);
-    else brawl.start(session.mode);
+    brawl.start(session.mode);
     return () => {
       brawl.destroy();
       brawlRef.current = null;

@@ -76,10 +76,9 @@ try {
   await click('Play Gravewick Mayhem'); await page.getByLabel('Gravewick Mayhem arena').waitFor();
   await page.keyboard.press('Escape'); await page.keyboard.press('KeyP');await button('Resume').waitFor();
   await button('Sound: off').waitFor();await click('Quit to title');await idle();
-  await click('Practice arena');await click('Start practice');
-  await button('Refill health, skills & ultimate').waitFor();
-  await page.keyboard.press('KeyP');await button('Resume').waitFor();
-  await click('Quit to title');await idle();
+  assert.equal(await button('Practice arena').count(),0);
+  assert.equal(await button('Start practice').count(),0);
+  assert.equal(await button('Refill health, skills & ultimate').count(),0);
   assert.deepEqual(errors,[]);
-  console.log('PASS lazy loading; 3 Mayhem/Tales round trips; listener, RAF and audio cleanup; mute retention; pause/resume; campaign and practice launch');
+  console.log('PASS lazy loading; 3 Mayhem/Tales round trips; listener, RAF and audio cleanup; mute retention; pause/resume; campaign launch; no Practice UI');
 } finally {await browser.close();}
