@@ -6,6 +6,7 @@ import { clone } from "three/addons/utils/SkeletonUtils.js";
 
 export interface Sprite {
   frames: HTMLCanvasElement[];
+  side?: {frames: HTMLCanvasElement[]; walk?: HTMLCanvasElement[]};
   walk?: HTMLCanvasElement[]; // heroes: a walk cycle
   aspect: number; // width / height
   dur: number; // idle/loop clip seconds
@@ -105,8 +106,16 @@ async function bakeSprites(): Promise<void> {
     const frames = renderClip(clip, i < 3 ? FRAMES : 10);
     const walkClip = gltf.animations.find((c) => c.name === "run") ?? gltf.animations.find((c) => c.name === "walk");
     const walk = i < 3 && walkClip !== undefined ? renderClip(walkClip, 16) : undefined;
+    // Wisp's library approach uses a real profile view, not a mirrored front-facing run.
+    let side: Sprite["side"];
+    if (i === 2) {
+      cam.position.set(center.x - 20, center.y, center.z);
+      cam.lookAt(center);
+      const sideWalkClip = gltf.animations.find((c) => c.name === "walk") ?? walkClip;
+      side = {frames: renderClip(clip, FRAMES), walk: sideWalkClip ? renderClip(sideWalkClip, FRAMES) : undefined};
+    }
     scene.remove(root);
-    sprites[i] = { frames, aspect, walk, dur: clip?.duration ?? 1, walkDur: walkClip?.duration ?? 1 };
+    sprites[i] = { frames, aspect, side, walk, dur: clip?.duration ?? 1, walkDur: walkClip?.duration ?? 1 };
     root.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
       object.geometry.dispose();

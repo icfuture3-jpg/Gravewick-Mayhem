@@ -1,3 +1,4 @@
+import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary } from "./tale-props";
 import { drawFigure } from "./heroes";
 import type { HeroId } from "./solo-story";
 
@@ -12,7 +13,10 @@ export interface TalePose {heroX: number; heroY: number; scale: number; progress
 /** Shared deterministic choreography; intro plays the task, outro shows the completed result. */
 export function talePose(hero: HeroId, chapter: number, time: number, complete = false): TalePose {
   const progress = complete ? 0.8 + Math.min(1, time / 4) * 0.2 : Math.min(1, Math.max(0, time / 7));
-  return {action: taleAction(hero, chapter), progress, heroX: 220 + progress * 280, heroY: 280,
+  const approach = Math.min(1, progress / 0.7);
+  return {action: taleAction(hero, chapter), progress,
+    heroX: hero === 2 && chapter === 0 ? 250 + approach * 310 : 220 + progress * 280,
+    heroY: hero === 2 && chapter === 0 ? 255 : hero === 1 && chapter < 2 ? 220 : 280,
     scale: hero === 1 && chapter === 2 ? 1.1 - Math.sin(progress * Math.PI) * 0.75 : 1.2};
 }
 const mix = (a: number, b: number, t: number) => a + (b - a) * Math.min(1, Math.max(0, t));
@@ -27,7 +31,8 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
   ctx.save();
   ctx.fillStyle = hero === 0 ? "#102d30" : hero === 1 ? "#36251d" : "#211737"; ctx.fillRect(0, 0, 960, 360);
   ctx.fillStyle = "#080911"; ctx.fillRect(0, 310, 960, 50);
-  const figure = (x = pose.heroX, alpha = 1, scale = pose.scale) => {ctx.save(); ctx.globalAlpha = alpha; drawFigure(ctx, hero, x, pose.heroY, scale, 0, false, false, time, {speed: p < 0.65 ? 100 : 0, phase: time * 1.4}); ctx.restore();};
+  const libraryApproach = hero === 2 && chapter === 0;
+  const figure = (x = pose.heroX, alpha = 1, scale = pose.scale) => {ctx.save(); ctx.globalAlpha = alpha; drawFigure(ctx, hero, x, pose.heroY, scale, 0, false, false, time, {speed: p < (libraryApproach ? 0.7 : 0.65) && !complete ? (libraryApproach ? 55 : 100) : 0, phase: time * (libraryApproach ? 0.65 : 1.4), side: libraryApproach}); ctx.restore();};
   if (hero === 0) {
     // Grimble carries an actual lantern; sparks visibly enter it, then illuminate the scene.
     const lx = pose.heroX + 45, ly = 240;
@@ -52,16 +57,16 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
   } else if (hero === 1) {
     if (chapter < 2) {
       ctx.fillStyle = "#795135"; ctx.fillRect(440, 255, 410, 18); ctx.fillRect(470, 270, 18, 60); ctx.fillRect(800, 270, 18, 60);
-      figure();
       const count = chapter === 0 ? 6 : 4;
+      const beat = Math.min(count - 0.001, p * count), current = Math.floor(beat), swing = Math.sin((beat % 1) * Math.PI);
+      const handX = 490 + current * (320 / count);
+      // Pip stays alongside the current toy, with a short mallet held at hand height.
+      figure(handX - 55);
       for (let i = 0; i < count; i++) {
-        const fixed = p > (i + 1) / (count + 1), x = 495 + i * (320 / count);
-        ctx.fillStyle = fixed ? "#b8da61" : "#8d7871"; ctx.fillRect(x, 220 - (fixed ? Math.abs(Math.sin(time * 4 + i)) * 10 : 0), 32, 30);
-        ctx.strokeStyle = "#e8d9aa"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x + 4, 225); ctx.lineTo(x + (fixed ? 27 : 12), fixed ? 225 : 247); ctx.stroke();
-        ctx.fillStyle = "#171421"; ctx.beginPath(); ctx.arc(x + 6, 253, 5, 0, Math.PI * 2); ctx.arc(x + 26, 253, 5, 0, Math.PI * 2); ctx.fill();
+        const fixed = complete || i < current || (i === current && beat % 1 > 0.5);
+        drawMonsterToy(ctx, i, 505 + i * (320 / count), 245, fixed, time);
       }
-      // Tool sweeps between Pip's hand and the piece being repaired.
-      ctx.strokeStyle = "#c7d6db"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(pose.heroX + 35, 220); ctx.lineTo(480 + p * 290, 205 + Math.sin(time * 12) * 12); ctx.stroke();
+      drawMeatMallet(ctx, handX, 220, complete || p === 1 ? 0.2 : swing);
       label(ctx, chapter === 0 ? "Pip repairs the market's broken toys" : "Pip rebuilds his first failed prototype", 480, 50);
       if (p > 0.8) label(ctx, chapter === 0 ? "Six toys spring back to life!" : "The old engine hums again!", 650, 110);
     } else {
@@ -73,12 +78,13 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
       label(ctx, p < 0.7 ? "Pip shrinks and slips beneath the scanner" : "His gadgets disable the nightmare machine's locks", 480, 50);
     }
   } else {
-    // Library shelves, a real mirror and a spellbook that moves out of the glass.
-    for (let i = 0; i < 8; i++) {ctx.fillStyle = "#574369"; ctx.fillRect(i * 120, 75, 75, 55); ctx.fillStyle = "#bda269"; ctx.fillRect(i * 120 + 8, 80, 8, 44);}
-    ctx.fillStyle = "#48366b"; ctx.strokeStyle = "#c7a6f1"; ctx.lineWidth = 7; ctx.fillRect(590, 100, 190, 210); ctx.strokeRect(590, 100, 190, 210);
+    drawWhimsicalLibrary(ctx, time);
+    // An arched, gilt mirror anchors the magical reading nook.
+    ctx.fillStyle = "#48366b"; ctx.strokeStyle = "#dfbe86"; ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(600, 303); ctx.lineTo(600, 152); ctx.bezierCurveTo(600, 61, 770, 61, 770, 152); ctx.lineTo(770, 303); ctx.closePath(); ctx.fill(); ctx.stroke();
     figure();
     if (chapter === 0) {
-      const bx = mix(680, pose.heroX + 60, Math.max(0, (p - 0.35) / 0.65));
+      const bx = mix(685, pose.heroX + 70, Math.max(0, (p - 0.7) / 0.3));
       ctx.fillStyle = "#efdfff"; ctx.fillRect(bx - 28, 190 + Math.sin(time * 3) * 4, 56, 38); ctx.strokeStyle = "#a96deb"; ctx.lineWidth = 3; ctx.strokeRect(bx - 28, 190 + Math.sin(time * 3) * 4, 56, 38);
       ctx.fillStyle = "#a96deb"; ctx.fillRect(bx - 2, 190 + Math.sin(time * 3) * 4, 4, 38);
       label(ctx, p < 0.4 ? "Wisp discovers a book inside the library mirror" : "She reaches through: the spellbook floats to her side", 480, 50);
