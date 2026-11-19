@@ -142,7 +142,6 @@ export function GameHud({ board }: { board: BoardApi }) {
               </text>
             </svg>
             <button style={btn} onClick={() => begin("story")}>Play Gravewick Mayhem</button>
-            <button style={{...btn, background: "linear-gradient(#76612b,#433018)"}} onClick={() => setScreen("stories")}>Gravewick Tales</button>
             <button style={btn} onClick={() => begin("endless")}>Endless arena</button>
             <button style={btn} onClick={() => openBoard("endless")}>Local high scores</button>
             <button style={btn} onClick={() => setScreen("grimoire")}>Grimoire</button>

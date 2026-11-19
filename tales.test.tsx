@@ -28,14 +28,14 @@ it.each([0, 1, 2] as const)("runs hero %i's three mini-game chapters without any
   expect(startTale(hero)).toMatchObject({chapter: 0, score: 0, phase: "intro"});
 });
 
-it("gives the original game and Gravewick Tales independent main-menu entry points", () => {
+it("keeps Mayhem on the main menu without a Gravewick Tales button", () => {
   const board = {submit: vi.fn(), view: vi.fn(), listen: vi.fn()};
   const html = renderToStaticMarkup(<GameHud board={board} />);
   expect(html).toContain("Play Gravewick Mayhem");
   expect(html).not.toContain("Practice arena");
   expect(html).not.toContain("Start practice");
   expect(html).not.toContain("Refill health");
-  expect(html).toContain(">Gravewick Tales</button>");
+  expect(html).not.toContain(">Gravewick Tales</button>");
   expect(html).not.toContain("Hero stories &amp; mini-games");
   expect(board.submit).not.toHaveBeenCalled();
 });
