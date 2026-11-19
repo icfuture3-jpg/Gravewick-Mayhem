@@ -1,3 +1,4 @@
+import { drawStoryMove, storyMove, moveName } from "./story-moves";
 import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary } from "./tale-props";
 import { drawFigure } from "./heroes";
 import type { HeroId } from "./solo-story";
@@ -15,9 +16,9 @@ export function talePose(hero: HeroId, chapter: number, time: number, complete =
   const progress = complete ? 0.8 + Math.min(1, time / 4) * 0.2 : Math.min(1, Math.max(0, time / 7));
   const approach = Math.min(1, progress / 0.7);
   return {action: taleAction(hero, chapter), progress,
-    heroX: hero === 2 && chapter === 0 ? 250 + approach * 310 : 220 + progress * 280,
+    heroX: hero === 2 && chapter === 0 ? 250 + approach * 310 : hero === 0 && chapter === 1 ? (progress < 0.45 ? 220 : 480) : 220 + progress * 280,
     heroY: hero === 2 && chapter === 0 ? 255 : hero === 1 && chapter < 2 ? 220 : 280,
-    scale: hero === 1 && chapter === 2 ? 1.1 - Math.sin(progress * Math.PI) * 0.75 : 1.2};
+    scale: hero === 1 && chapter === 2 && time >= 0.2 && time < 6.2 && !complete ? 0.45 : 1.2};
 }
 const mix = (a: number, b: number, t: number) => a + (b - a) * Math.min(1, Math.max(0, t));
 function star(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
@@ -32,7 +33,7 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
   ctx.fillStyle = hero === 0 ? "#102d30" : hero === 1 ? "#36251d" : "#211737"; ctx.fillRect(0, 0, 960, 360);
   ctx.fillStyle = "#080911"; ctx.fillRect(0, 310, 960, 50);
   const libraryApproach = hero === 2 && chapter === 0;
-  const figure = (x = pose.heroX, alpha = 1, scale = pose.scale) => {ctx.save(); ctx.globalAlpha = alpha; drawFigure(ctx, hero, x, pose.heroY, scale, 0, false, false, time, {speed: p < (libraryApproach ? 0.7 : 0.65) && !complete ? (libraryApproach ? 55 : 100) : 0, phase: time * (libraryApproach ? 0.65 : 1.4), side: libraryApproach}); ctx.restore();};
+  const figure = (x = pose.heroX, alpha = 1, scale = pose.scale) => {ctx.save(); ctx.globalAlpha = alpha * (hero === 2 && chapter === 1 && time < 5 && !complete ? 0.18 : 1); drawFigure(ctx, hero, x, pose.heroY, scale, 0, false, false, time, {speed: p < (libraryApproach ? 0.7 : 0.65) && !complete ? (libraryApproach ? 55 : 100) : 0, phase: time * (libraryApproach ? 0.65 : 1.4), side: libraryApproach}); ctx.restore();};
   if (hero === 0) {
     // Grimble carries an actual lantern; sparks visibly enter it, then illuminate the scene.
     const lx = pose.heroX + 45, ly = 240;
@@ -103,5 +104,15 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
       label(ctx, "Wisp writes her own ending; the dark mirror turns to starlight", 480, 50);
     }
   }
+  const move = storyMove(hero, chapter);
+  const bookDiscovery = hero === 2 && chapter === 0;
+  const castX = bookDiscovery ? mix(685, pose.heroX + 70, Math.max(0, (p - 0.7) / 0.3)) : hero === 0 && chapter === 1 ? 220 : pose.heroX + 35;
+  if (!complete && time <= 7 && (!bookDiscovery || p >= 0.7)) drawStoryMove(ctx, move, castX, bookDiscovery ? 210 : pose.heroY-25,
+    hero === 0 && chapter === 1 ? 480 : 800, hero === 0 && chapter === 1 ? pose.heroY-25 : 230, bookDiscovery ? (p-0.7)/0.3 : p, chapter % 3);
+  if (hero === 2 && chapter === 2 && !complete && p > 0.3) {
+    // The floating book, not a second Wisp, launches the bolt.
+    ctx.fillStyle="#f4e6ce";ctx.fillRect(pose.heroX+25,pose.heroY-48,40,26);
+  }
+  label(ctx, `${moveName(move)}${move === "tiny" ? " · 6 seconds" : move === "veil" ? " · 5 seconds" : ""}`, 480, 340);
   ctx.restore();
 }

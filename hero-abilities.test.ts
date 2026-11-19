@@ -168,3 +168,13 @@ it("does not drop quick J/K/L taps between frames", () => {
   expect(s.texts).toContain("2 ILLUSIONS");
   s.game.destroy();
 });
+
+it.each([0,1,2] as const)("hero %i explains the uncharged L requirement in real combat, then activates when charged", hero=>{
+  const s=setup(hero);
+  s.game.start('endless');s.tick();
+  s.key('KeyL');expect(s.history).toContain('L needs 100% charge. Hit monsters and discover enemies to charge it.');
+  expect(s.player().ult).toBeLessThan(100);
+  s.game.startPractice({hero,enemy:'ghoul'});s.tick();s.key('KeyL');
+  expect(s.history).toContain(hero===0?'Hidden Light':hero===1?'Tiny Trouble':'Mirror Illusions');
+  s.game.destroy();
+});

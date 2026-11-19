@@ -15,7 +15,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
   const [running, setRunning] = useState(false);
   const [version, setVersion] = useState(0);
   const snapshot = () => ({progress: state.current.progress, status: state.current.status, message: state.current.message,
-    objective: miniObjective(state.current), part: state.current.part, carrying: state.current.carrying});
+    objective: miniObjective(state.current), part: state.current.part, carrying: state.current.carrying, skillCd: state.current.skillCd, ultimateCd: state.current.ultimateCd, tiny: state.current.tiny, illusions: state.current.illusions.length});
   const [view, setView] = useState(snapshot);
   const actions = useRef<Partial<MiniInput>[]>([]);
   const aim = useRef({x: 458, y: 225});
@@ -30,7 +30,9 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
     const keydown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLButtonElement && (e.code === "Space" || e.code === "Enter")) return;
       if (e.code === "Space" || e.code.startsWith("Arrow")) e.preventDefault();
-      if (!e.repeat && (e.code === "KeyJ" || e.code === "Space") && hero === 1) queue({action: true});
+      if (!e.repeat && (e.code === "KeyJ" || (e.code === "Space" && hero === 1))) queue({action: true});
+      if (!e.repeat && e.code === "KeyL") queue({ultimate:true});
+      if (!e.repeat && e.code === "KeyK" && hero !== 2) queue({skill: true});
       keys.add(e.code);
     };
     const keyup = (e: KeyboardEvent) => keys.delete(e.code);
@@ -46,7 +48,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
       raf = requestAnimationFrame(draw);
     };
     const move = (e: PointerEvent) => {Object.assign(aim.current, miniPoint(canvas.current!.getBoundingClientRect(), e.clientX, e.clientY));};
-    const click = (e: PointerEvent) => {move(e); queue(hero === 1 ? {action: true} : {moveTo: true});};
+    const click = (e: PointerEvent) => {move(e); keys.clear(); queue(hero === 1 ? {action: true} : {moveTo: true});};
     window.addEventListener("keydown", keydown); window.addEventListener("keyup", keyup); window.addEventListener("blur", blur);
     const node = canvas.current!; node.addEventListener("pointermove", move); node.addEventListener("pointerdown", click);
     raf = requestAnimationFrame(draw);
@@ -65,9 +67,15 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
     <div role="group" aria-label="Mini-game actions" style={{display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center"}}>
       {hero === 1 ? REPAIR_PARTS.map((p, i) => <button key={i} disabled={disabled} style={{...button, borderColor: view.part === i ? "#ffdc6a" : "#b392e8"}} onClick={() => queue({action: true, aimX: p.x, aimY: p.y})}>Hit part {i + 1}{view.part === i ? " · GOLD" : ""}</button>) : <>
         {hero === 0 ? state.current.sparks.map((p, i) => <button key={i} disabled={disabled || p.taken || p.following} style={button} onClick={() => walkTo(p)}>Find spark {i + 1}</button>) : state.current.pages.map((p, i) => <button key={i} disabled={disabled || p.taken || view.carrying !== null} style={button} onClick={() => walkTo(p)}>Collect page {i + 1}</button>)}
-        <button disabled={disabled} style={button} onClick={() => walkTo(HOME)}>{hero === 0 ? "Guide sparks HOME" : "Return to BOOK"}</button>
+        <button disabled={disabled} style={button} onClick={() => hero === 2 ? queue({returnToBook: true}) : walkTo(HOME)}>{hero === 0 ? "Guide sparks HOME" : "Return to BOOK"}</button>
       </>}
     </div>
+    <div role="group" aria-label="Grimoire moves" style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
+      <button style={button} disabled={disabled || (hero === 2 && view.carrying !== null)} onClick={() => queue({action:true, ...(hero === 2 ? {aimX:(state.current.pages.find(p => !p.taken)?.x ?? aim.current.x), aimY:(state.current.pages.find(p => !p.taken)?.y ?? aim.current.y)} : {})})}>{HERO_ABILITIES[hero].primaryName} · J</button>
+      {hero !== 2 && <button style={button} disabled={disabled || view.skillCd > 0} onClick={() => queue({skill:true, ...(hero === 1 ? {aimX:REPAIR_PARTS[state.current.part]!.x,aimY:REPAIR_PARTS[state.current.part]!.y} : {})})}>{HERO_ABILITIES[hero].skillName} · K{view.skillCd > 0 ? ` (${Math.ceil(view.skillCd)}s)` : ""}</button>}
+      <button style={button} disabled={disabled || view.ultimateCd > 0} onClick={() => queue({ultimate:true})}>{HERO_ABILITIES[hero].ultName} · L{view.ultimateCd > 0 ? ` (${Math.ceil(view.ultimateCd)}s)` : " · Ready"}</button>
+    </div>
+    <div aria-live="polite" style={{fontSize:14,color:"#ffd36a"}}>{view.tiny > 0 ? `Tiny Trouble active · ${Math.ceil(view.tiny)}s · faster mallet` : view.illusions > 0 ? `${view.illusions} Mirror Illusions active · retrieving pages` : "L ultimate: ready at chapter start, 12s recharge. Pausing freezes recharge."}</div>
     <div role="status" style={{fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : running ? "Playing · No time limit" : state.current.elapsed > 0 ? "Paused · Your progress is safe" : "Ready when you are"}</div>
     <div style={{display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center"}}>
       {view.status === "playing" && <button style={button} onClick={(e) => {e.currentTarget.blur(); setRunning((v) => !v);}}>{running ? "Pause mini-game" : state.current.elapsed > 0 ? "Resume mini-game" : "Start mini-game"}</button>}
