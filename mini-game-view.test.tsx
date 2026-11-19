@@ -26,3 +26,10 @@ it.each([0,1,2] as const)("renders hero %i's playing and completed mini-game wit
   s.status = "won"; s.progress = s.goal;
   drawMini(context, s, 480, 225);
 });
+
+it.each([1,2])("Grimble chapter %i has a different action and no misleading HOME control",stage=>{
+ const html=renderToStaticMarkup(<MiniGame hero={0} stage={stage} onComplete={()=>{}} onExit={()=>{}}/>);
+ expect(html).not.toContain("Guide sparks HOME");
+ expect(html).toContain(stage===1?"Light nearby lantern":"Activate nearby seal");
+ expect(html).toContain(stage===1?"Go to lantern 1":"Go to seal 1");
+});
