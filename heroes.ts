@@ -457,14 +457,15 @@ export function drawFigure(
   prop: boolean,
   blink = false,
   t = 0,
-  mv?: { speed: number; phase: number },
+  mv?: { speed: number; phase: number; side?: boolean },
 ) {
   const sp = sprites[idx];
   if (sp !== null && sp !== undefined) {
     ctx.save();
     // Baked 3D model frame (same look as "Meet the heroes").
-    const idleFrame = sp.frames[Math.floor((((t / sp.dur) % 1) + 1) % 1 * sp.frames.length)] ?? sp.frames[0];
-    const wk = sp.walk;
+    const view = mv?.side && sp.side ? sp.side : sp;
+    const idleFrame = view.frames[Math.floor((((t / sp.dur) % 1) + 1) % 1 * view.frames.length)] ?? view.frames[0];
+    const wk = view.walk;
     // Blend smoothly between idle and walk by speed so starting/stopping never snaps.
     const blend = mv !== undefined && wk !== undefined ? Math.max(0, Math.min(1, (mv.speed - 12) / 70)) : 0;
     const walkFrame = blend > 0 && mv !== undefined && wk !== undefined ? wk[Math.floor((((mv.phase % 1) + 1) % 1) * wk.length)] : undefined;

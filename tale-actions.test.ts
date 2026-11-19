@@ -24,3 +24,17 @@ it.each([0,1,2] as const)("renders hero %i's three actions and conclusions at ea
   }
   expect(labels.length).toBeGreaterThan(10);
 });
+
+it("walks Wisp sideways toward the book, then stops at the mirror", () => {
+  const context = new Proxy({}, {get: () => vi.fn()}) as CanvasRenderingContext2D;
+  vi.mocked(drawFigure).mockClear();
+  drawTaleAction(context, 2, 0, 2);
+  expect(vi.mocked(drawFigure).mock.calls[0]![9]).toMatchObject({side: true, speed: 55});
+  const start = talePose(2, 0, 0), arrival = talePose(2, 0, 4.9);
+  expect(arrival.heroX).toBeGreaterThan(start.heroX);
+  expect(arrival.heroY).toBe(start.heroY);
+  expect(talePose(2, 0, 7).heroX).toBe(arrival.heroX);
+  vi.mocked(drawFigure).mockClear();
+  drawTaleAction(context, 2, 0, 7);
+  expect(vi.mocked(drawFigure).mock.calls[0]![9]).toMatchObject({side: true, speed: 0});
+});
