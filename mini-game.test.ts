@@ -190,3 +190,12 @@ it("the star gate requires numbered seals in order without resetting a wrong att
   for(const seal of s.sparks){at(s,seal);stepMini(s,{...idle,action:true},0.05);}
   expect(s.status).toBe("won");
 });
+
+it("wood knocks count actual Pip swings, not frame redraws, gadgets or blocked cooldown inputs",()=>{
+ const s=createMini(1),p=REPAIR_PARTS[0]!;
+ stepMini(s,{...idle,action:true,aimX:p.x,aimY:p.y},0.05);expect(s.hammerHits).toBe(1);
+ stepMini(s,{...idle,action:true},0.05);expect(s.hammerHits).toBe(1);
+ tick(s,8);expect(s.hammerHits).toBe(1);
+ stepMini(s,{...idle,action:true},0.05);expect(s.hammerHits).toBe(2);
+ expect(createMini(1).hammerHits).toBe(0);
+});

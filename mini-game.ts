@@ -16,7 +16,7 @@ export interface MiniState {
   illusionBolts: {x:number;y:number;tx:number;ty:number;age:number}[];
   effect: {move: StoryMove; x: number; y: number; tx: number; ty: number; age: number} | null;
   projectile: {x: number; y: number; tx: number; ty: number; age: number; gadget: number; move: "bolt" | "gadget"} | null;
-  part: number; swing: number; swingX: number; swingY: number;
+  hammerHits: number; part: number; swing: number; swingX: number; swingY: number;
 }
 export const HOME = {x: 480, y: 405};
 export const REPAIR_PARTS = [{x: 458, y: 225}, {x: 505, y: 255}, {x: 480, y: 290}] as const;
@@ -30,7 +30,7 @@ export function createMini(hero: HeroId, stage = 0): MiniState {
     status: "playing", px: HOME.x, py: HOME.y, invuln: 0, destination: null, guidingHome: false, message: "",
     sparks: [{x: 130, y: 150}, {x: 330, y: 260}, {x: 550, y: 120}, {x: 790, y: 230}, {x: 740, y: 390}].map((p) => ({...p, found: false, following: false, taken: false})),
     pages: [{x: 185, y: 180}, {x: 735, y: 180}, {x: 770, y: 350}].map((p) => ({...p, taken: false})), carrying: null,
-    bookArrival: 0, primaryCd: 0, skillCd: 0, ultimateCd: 0, tiny: 0, illusions: [], illusionBolts: [], effect: null, projectile: null, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
+    bookArrival: 0, primaryCd: 0, skillCd: 0, ultimateCd: 0, tiny: 0, illusions: [], illusionBolts: [], effect: null, projectile: null, hammerHits: 0, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
 }
 export function sparkControl(spark: {following: boolean; taken: boolean}, index: number) {
   const number = index + 1;
@@ -129,6 +129,7 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
   }
   if (s.hero === 1) {
     if (input.action && s.swing === 0) {
+      s.hammerHits++;
       s.swing = s.tiny > 0 ? 0.14 : 0.28; s.swingX = input.aimX; s.swingY = input.aimY;
       if (distance({x: input.aimX, y: input.aimY}, REPAIR_PARTS[s.part]!) <= 25) {
         repair();

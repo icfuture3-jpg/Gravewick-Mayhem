@@ -18,6 +18,7 @@ it("plays bundled recordings, honors mute and stops every sample on exit", () =>
   const thunder = clips.find((clip) => clip.src.endsWith("thunder.ogg"))!;
   expect(thunder.play).not.toHaveBeenCalled();
   sound.setMuted(false);sound.sample!("thunder", 0.8);expect(thunder.play).toHaveBeenCalledTimes(1);
+  sound.sample!("wood",0.75);expect(clips.find(c=>c.src.endsWith("wood-knock.wav"))!.play).toHaveBeenCalledTimes(1);
   sound.close();expect(clips.every((clip) => clip.pause.mock.calls.length === 1)).toBe(true);
   sound.sample!("thunder", 0.8);expect(thunder.play).toHaveBeenCalledTimes(1);
 });

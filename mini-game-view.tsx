@@ -1,3 +1,4 @@
+import { createSound } from "./audio";
 import { miniChapter } from "./mini-backstory";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { HERO_ABILITIES } from "./hero-abilities";
@@ -6,10 +7,17 @@ import { createMini, stepMini, miniBonus, miniPoint, miniObjective, sparkControl
 import { drawMini } from "./mini-game-art";
 
 const button: CSSProperties = {padding: "8px 16px", color: "white", background: "#51317c", border: "2px solid #b392e8", borderRadius: 8, cursor: "pointer", font: "bold 15px Trebuchet MS"};
-export function MiniGame({hero, stage = 0, onComplete, onExit}: {
-  hero: HeroId; stage?: number; onComplete: (bonus: number) => void; onExit: () => void;
+export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, onMuted}: {
+  hero: HeroId; stage?: number; onComplete: (bonus: number) => void; onExit: () => void; muted?: boolean; onMuted?: (muted: boolean) => void;
 }) {
   const lore = miniChapter(hero, stage);
+  const sound = useRef<ReturnType<typeof createSound> | null>(null);
+  useEffect(() => {
+    if(hero !== 1) return;
+    sound.current = createSound(); sound.current.setMuted(muted);
+    return () => {sound.current?.close();sound.current=null;};
+  }, [hero]);
+  useEffect(() => {sound.current?.setMuted(muted);}, [muted]);
   const canvas = useRef<HTMLCanvasElement>(null);
   const state = useRef(createMini(hero, stage));
   const [running, setRunning] = useState(false);
@@ -40,9 +48,11 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
     const draw = (now: number) => {
       const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
       const s = state.current;
+      const hitsBefore = s.hammerHits;
       if (running) stepMini(s, {x: Number(keys.has("KeyD") || keys.has("ArrowRight")) - Number(keys.has("KeyA") || keys.has("ArrowLeft")),
         y: Number(keys.has("KeyS") || keys.has("ArrowDown")) - Number(keys.has("KeyW") || keys.has("ArrowUp")),
         aimX: aim.current.x, aimY: aim.current.y, ...actions.current.shift()}, dt);
+      if(s.hammerHits > hitsBefore) sound.current?.sample?.("wood",0.75);
       drawMini(ctx, s, aim.current.x, aim.current.y);
       if (now - lastView > 80) {setView(snapshot()); lastView = now;}
       raf = requestAnimationFrame(draw);
@@ -82,6 +92,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
       <button style={button} disabled={disabled || view.ultimateCd > 0} onClick={() => queue({ultimate:true})}>{HERO_ABILITIES[hero].ultName} · L{view.ultimateCd > 0 ? ` (${Math.ceil(view.ultimateCd)}s)` : " · Ready"}</button>
     </div>
     <div aria-live="polite" style={{fontSize:14,color:"#ffd36a"}}>{view.tiny > 0 ? `Tiny Trouble active · ${Math.ceil(view.tiny)}s · faster mallet` : view.illusions > 0 ? `${view.illusions} Mirror Illusions active · retrieving pages` : "L ultimate: ready at chapter start, 12s recharge. Pausing freezes recharge."}</div>
+    {hero===1 && onMuted && <button style={button} onClick={() => onMuted(!muted)}>Sound: {muted ? "off" : "on"}</button>}
     <div role="status" style={{fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : running ? "Playing · No time limit" : state.current.elapsed > 0 ? "Paused · Your progress is safe" : "Ready when you are"}</div>
     <div style={{display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center"}}>
       {view.status === "playing" && <button style={button} onClick={(e) => {e.currentTarget.blur(); setRunning((v) => !v);}}>{running ? "Pause mini-game" : state.current.elapsed > 0 ? "Resume mini-game" : "Start mini-game"}</button>}

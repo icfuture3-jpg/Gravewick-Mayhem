@@ -119,3 +119,7 @@ In the team campaign and Endless combat, every hero now starts with a ready L / 
 The backyard rescues five following sparks at HOME. The crypt instead asks you to walk to five keeper lanterns and use J / Light nearby lantern to relight them; nothing follows and no HOME trip is needed. The final chapter activates five star-gate seals in numbered order, with the next seal highlighted gold and no penalty for a wrong attempt. K portal and L Hidden Light remain available in each chapter.
 
 Guide sparks HOME is a dedicated command: it ignores held movement input until Grimble arrives, explains when no sparks are following, and delivers all followers. Find controls show a following or rescued state instead of silently disabling under the old Find label.
+
+## Pip's wooden toy-repair audio
+
+Pip's story mallet cues and playable mini-game swings use a bundled original 140ms wood knock, with damped inharmonic resonances and a short contact click instead of pitched beeps. A playable accepted mallet swing triggers one knock; idle drawing, cooldown-blocked input, pause and muted play do not. The mini-game shares the story's sound preference and exposes a Sound toggle. Audio closes on exit. Grimble's thunder and all other heroes' audio are unchanged.
