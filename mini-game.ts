@@ -1,13 +1,14 @@
 import { miniChapter } from "./mini-backstory";
 import type { HeroId } from "./solo-story";
 
-export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean}
+export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean}
 interface Light {x: number; y: number; found: boolean; following: boolean; taken: boolean}
 export interface MiniState {
   hero: HeroId; stage: number; elapsed: number; progress: number; goal: number;
   status: "playing" | "won"; px: number; py: number; invuln: number; message: string;
   destination: {x: number; y: number} | null;
   sparks: Light[]; pages: {x: number; y: number; taken: boolean}[]; carrying: number | null;
+  bookArrival: number;
   part: number; swing: number; swingX: number; swingY: number;
 }
 export const HOME = {x: 480, y: 405};
@@ -22,7 +23,7 @@ export function createMini(hero: HeroId, stage = 0): MiniState {
     status: "playing", px: HOME.x, py: HOME.y, invuln: 0, destination: null, message: "",
     sparks: [{x: 130, y: 150}, {x: 330, y: 260}, {x: 550, y: 120}, {x: 790, y: 230}, {x: 740, y: 390}].map((p) => ({...p, found: false, following: false, taken: false})),
     pages: [{x: 185, y: 180}, {x: 735, y: 180}, {x: 770, y: 350}].map((p) => ({...p, taken: false})), carrying: null,
-    part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
+    bookArrival: 0, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
 }
 export function shadowPosition(index: number, time: number) {
   return {x: 230 + index * 250, y: 220 + Math.sin(time * 0.8 + index * 2) * 85};
@@ -36,8 +37,11 @@ export function miniObjective(s: MiniState): string {
   return following ? `${following} ${following === 1 ? "spark is" : "sparks are"} following — guide them to HOME` : "Find star sparks — your lantern lights the way";
 }
 export function stepMini(s: MiniState, input: MiniInput, dt: number) {
-  if (s.status !== "playing") return;
   dt = Math.max(0, Math.min(0.05, dt));
+  if (s.status !== "playing") {
+    if (s.hero === 2) s.bookArrival = Math.min(1, s.bookArrival + dt / 1.6);
+    return;
+  }
   s.elapsed += dt; s.invuln = Math.max(0, s.invuln - dt); s.swing = Math.max(0, s.swing - dt);
   const remember = () => {s.progress++; s.message = miniChapter(s.hero, s.stage).memories[s.progress - 1]!;};
   if (s.hero === 1) {
@@ -49,8 +53,11 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
       } else s.message = "Aim for the large GOLD ring — no penalty. Try again!";
     }
   } else {
+    const bookClick = s.hero === 2 && input.moveTo && Math.hypot(input.aimX - HOME.x, input.aimY - HOME.y) <= 75;
+    const returning = s.hero === 2 && (input.returnToBook || bookClick);
     if (input.moveTo) s.destination = {x: Math.max(35, Math.min(925, input.aimX)), y: Math.max(105, Math.min(445, input.aimY))};
-    let dx = input.x, dy = input.y;
+    if (returning) s.destination = {...HOME};
+    let dx = returning ? 0 : input.x, dy = returning ? 0 : input.y;
     if (dx || dy) s.destination = null;
     else if (s.destination) {
       dx = s.destination.x - s.px; dy = s.destination.y - s.py;
@@ -89,6 +96,12 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
     }
   }
   if (s.progress >= s.goal) {s.status = "won"; s.destination = null;}
+}
+export function bookPose(s: MiniState) {
+  const p = s.bookArrival, ease = p * p * (3 - 2 * p);
+  return {x: HOME.x + (s.px + 55 - HOME.x) * ease,
+    y: HOME.y + (s.py - 65 - HOME.y) * ease - Math.sin(p * Math.PI) * 45,
+    glow: s.status === "won" ? 32 : s.carrying !== null ? 22 : 12};
 }
 export const miniBonus = (s: MiniState) => s.status === "won" ? 500 + s.goal * 100 : 0;
 
