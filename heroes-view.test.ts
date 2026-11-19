@@ -17,3 +17,16 @@ it("uses Wisp's profile frames only when a story explicitly requests that view",
   expect(drawImage.mock.calls[0]![0]).toBe(front);
   sprites[2] = null;
 });
+
+it("draws exactly one Wisp sprite at intermediate walking speeds", () => {
+  const frame = {} as HTMLCanvasElement, walk = {} as HTMLCanvasElement;
+  sprites[2] = {frames: [frame], walk: [walk], side: {frames: [frame], walk: [walk]}, aspect: 1, dur: 1, walkDur: 1};
+  const drawImage = vi.fn();
+  const ctx = new Proxy({drawImage}, {get: (obj, key) => Reflect.get(obj, key) ?? vi.fn()}) as unknown as CanvasRenderingContext2D;
+  for (const side of [false, true]) for (const speed of [0, 25, 55, 70, 100]) {
+    drawImage.mockClear();
+    drawFigure(ctx, 2, 100, 100, 1, 0, false, false, 0, {side, speed, phase: 0});
+    expect(drawImage).toHaveBeenCalledTimes(1);
+  }
+  sprites[2] = null;
+});

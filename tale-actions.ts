@@ -89,9 +89,10 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
       ctx.fillStyle = "#a96deb"; ctx.fillRect(bx - 2, 190 + Math.sin(time * 3) * 4, 4, 38);
       label(ctx, p < 0.4 ? "Wisp discovers a book inside the library mirror" : "She reaches through: the spellbook floats to her side", 480, 50);
     } else if (chapter === 1) {
-      ctx.save(); ctx.globalAlpha = 1 - p * 0.8; drawFigure(ctx, 2, 685, 270, 1.1, Math.PI, false, false, time); ctx.restore();
-      for (const side of [-1, 1]) figure(pose.heroX + side * 90, Math.min(0.55, p), 1);
-      label(ctx, "Wisp's brave mirror doubles answer her doubtful reflection", 480, 50);
+      // Show the doubt fading as mist, never as extra Wisp figures.
+      ctx.save(); ctx.globalAlpha = (1 - p) * 0.5; ctx.fillStyle = "#161020";
+      ctx.beginPath(); ctx.ellipse(685, 210, 65, 80, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      label(ctx, "Wisp trusts her own voice; the doubtful mirror clears", 480, 50);
     } else {
       ctx.save(); ctx.globalAlpha = 1 - p; ctx.fillStyle = "#151023"; ctx.fillRect(610, 120, 150, 180); ctx.restore();
       ctx.fillStyle = "#f4e6ce"; ctx.fillRect(545, 210, 100, 75);

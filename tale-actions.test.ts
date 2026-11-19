@@ -38,3 +38,12 @@ it("walks Wisp sideways toward the book, then stops at the mirror", () => {
   drawTaleAction(context, 2, 0, 7);
   expect(vi.mocked(drawFigure).mock.calls[0]![9]).toMatchObject({side: true, speed: 0});
 });
+
+it("shows only one Wisp in every personal story chapter and conclusion", () => {
+  const ctx = new Proxy({}, {get: () => vi.fn()}) as CanvasRenderingContext2D;
+  for (let chapter = 0; chapter < 3; chapter++) for (const time of [0, 2, 5, 8]) for (const complete of [false, true]) {
+    vi.mocked(drawFigure).mockClear();
+    drawTaleAction(ctx, 2, chapter, time, complete);
+    expect(drawFigure).toHaveBeenCalledTimes(1);
+  }
+});
