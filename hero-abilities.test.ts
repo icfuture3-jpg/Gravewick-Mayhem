@@ -169,12 +169,32 @@ it("does not drop quick J/K/L taps between frames", () => {
   s.game.destroy();
 });
 
-it.each([0,1,2] as const)("hero %i explains the uncharged L requirement in real combat, then activates when charged", hero=>{
-  const s=setup(hero);
-  s.game.start('endless');s.tick();
-  s.key('KeyL');expect(s.history).toContain('L needs 100% charge. Hit monsters and discover enemies to charge it.');
-  expect(s.player().ult).toBeLessThan(100);
-  s.game.startPractice({hero,enemy:'ghoul'});s.tick();s.key('KeyL');
-  expect(s.history).toContain(hero===0?'Hidden Light':hero===1?'Tiny Trouble':'Mirror Illusions');
-  s.game.destroy();
+it.each([0,1,2] as const)("hero %i can use L in a normal fresh run without practice refill",hero=>{
+ const s=setup(hero);s.game.start('endless');s.tick();s.key(`Digit${hero+1}`);s.key('KeyL');s.tick(4);
+ expect(s.history).toContain(hero===0?'Hidden Light':hero===1?'Tiny Trouble':'Mirror Illusions');
+ if(hero===1)expect(s.player().shrink).toBeGreaterThan(5);
+ if(hero===2)expect(s.texts).toContain('2 ILLUSIONS');
+ s.key('KeyL');expect(s.history.some(t=>t.includes('recharging ·'))).toBe(true);
+ s.game.destroy();
+});
+it("all three combat ultimates have independent readiness and recharge without hits",()=>{
+ const s=setup(0);s.game.start('story');s.key('Escape');
+ // Stay in the training arena: no enemy damage or refill contributes charge.
+ for(const hero of [0,1,2]){
+  s.key(`Digit${hero+1}`);expect(s.player().ult).toBe(100);
+  s.key('KeyL');s.tick(4);expect(s.player().ult).toBeLessThan(10);
+ }
+ s.key('Digit1');expect(s.player().ult).toBeLessThan(20);
+ s.tick(260);expect(s.player().ult).toBe(100);
+ s.key('KeyL');expect(s.player().ult).toBeLessThan(10);
+ s.game.start('endless');s.tick();expect(s.player().ult).toBe(100);
+ s.game.destroy();
+});
+it("pause and Grimoire freeze combat ultimate recharge; held L does not auto-recast",()=>{
+ const s=setup(1);s.game.start('story');s.key('Escape');s.key('Digit2');s.key('KeyL');s.tick(4);
+ s.key('KeyP');const paused=s.player().ult;s.tick(100);expect(s.player().ult).toBe(paused);
+ s.key('KeyP');s.key('KeyG');const book=s.player().ult;s.tick(100);expect(s.player().ult).toBe(book);
+ s.key('KeyG');s.dispatch('keydown','KeyL');s.tick(300);s.dispatch('keyup','KeyL');
+ expect(s.player().ult).toBe(100); // One attempted press while empty, no repeated cast on readiness.
+ s.key('KeyL');expect(s.player().ult).toBeLessThan(10);s.game.destroy();
 });

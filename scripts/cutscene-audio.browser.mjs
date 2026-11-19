@@ -22,9 +22,13 @@ const click=async name=>page.getByRole('button',{name,exact:true}).click();
 const audit=()=>page.evaluate(()=>({...window.audioAudit}));
 try {
   await page.goto(process.env.GAME_URL || 'http://localhost:5174');
-  await page.getByRole('button',{name:'Gravewick Tales',exact:true}).waitFor({timeout:90000});
+  await page.getByRole('button',{name:'Meet the heroes',exact:true}).waitFor({timeout:90000});
   await page.clock.install();
-  await click('Gravewick Tales');
+  await click('Meet the heroes');
+  await click('Select Grimble');
+  await page.getByRole('button',{name:/Play Grimble/}).click();
+  await page.getByLabel('Personal story cutscene').waitFor();
+  await click('Back to Gravewick Tales');
   for(const hero of ['Grimble','Pip','Wisp']) {
     const before=await audit();
     await click(`Select ${hero}`);
