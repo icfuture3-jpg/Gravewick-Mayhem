@@ -3,7 +3,7 @@ import type { StoryMove } from "./story-moves";
 import { miniChapter } from "./mini-backstory";
 import type { HeroId } from "./solo-story";
 
-export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean; ultimate?: boolean}
+export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean; ultimate?: boolean; findSpark?: number}
 interface Light {x: number; y: number; found: boolean; following: boolean; taken: boolean}
 export interface MiniState {
   hero: HeroId; stage: number; elapsed: number; progress: number; goal: number;
@@ -31,6 +31,10 @@ export function createMini(hero: HeroId, stage = 0): MiniState {
     sparks: [{x: 130, y: 150}, {x: 330, y: 260}, {x: 550, y: 120}, {x: 790, y: 230}, {x: 740, y: 390}].map((p) => ({...p, found: false, following: false, taken: false})),
     pages: [{x: 185, y: 180}, {x: 735, y: 180}, {x: 770, y: 350}].map((p) => ({...p, taken: false})), carrying: null,
     bookArrival: 0, primaryCd: 0, skillCd: 0, ultimateCd: 0, tiny: 0, illusions: [], illusionBolts: [], effect: null, projectile: null, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
+}
+export function sparkControl(spark: {following: boolean; taken: boolean}, index: number) {
+  const number = index + 1;
+  return {label: spark.taken ? `Spark ${number} · HOME ✓` : spark.following ? `Guide spark ${number} HOME` : `Find spark ${number}`, rescued: spark.taken};
 }
 export function shadowPosition(index: number, time: number) {
   return {x: 230 + index * 250, y: 220 + Math.sin(time * 0.8 + index * 2) * 85};
@@ -124,11 +128,17 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
       } else s.message = "Aim for the large GOLD ring — no penalty. Try again!";
     }
   } else {
+    const selectedSpark = s.hero === 0 && input.findSpark !== undefined ? s.sparks[input.findSpark] : undefined;
+    const sparkTarget = selectedSpark && !selectedSpark.taken ? selectedSpark.following ? HOME : selectedSpark : null;
+    if (sparkTarget) {
+      s.destination = {x:sparkTarget.x,y:sparkTarget.y};
+      s.message = selectedSpark!.following ? "This spark is following — guiding it HOME." : `Walking to spark ${input.findSpark! + 1}.`;
+    }
     const bookClick = s.hero === 2 && input.moveTo && Math.hypot(input.aimX - HOME.x, input.aimY - HOME.y) <= 75;
     const returning = s.hero === 2 && (input.returnToBook || bookClick);
     if (input.moveTo) s.destination = {x: Math.max(35, Math.min(925, input.aimX)), y: Math.max(105, Math.min(445, input.aimY))};
     if (returning) s.destination = {...HOME};
-    let dx = returning ? 0 : input.x, dy = returning ? 0 : input.y;
+    let dx = returning || sparkTarget ? 0 : input.x, dy = returning || sparkTarget ? 0 : input.y;
     if (dx || dy) s.destination = null;
     else if (s.destination) {
       dx = s.destination.x - s.px; dy = s.destination.y - s.py;

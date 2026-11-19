@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { createMini, stepMini, miniBonus, miniPoint, miniObjective, HOME, bookPose, REPAIR_PARTS, shadowPosition, type MiniInput, type MiniState } from "./mini-game";
+import { createMini, stepMini, miniBonus, miniPoint, miniObjective, HOME, sparkControl, bookPose, REPAIR_PARTS, shadowPosition, type MiniInput, type MiniState } from "./mini-game";
 import { miniChapter } from "./mini-backstory";
 const idle: MiniInput = {x: 0, y: 0, aimX: 480, aimY: 200};
 const tick = (s: MiniState, frames: number) => {for (let i = 0; i < frames; i++) stepMini(s, idle, 0.05);};
@@ -155,4 +155,21 @@ it("Mirror Illusions creates two temporary copies which fire and retrieve a page
 });
 it("L cannot change progress or create copies after completion",()=>{
   for(const hero of [0,1,2] as const){const s=createMini(hero);s.status='won';stepMini(s,{...idle,ultimate:true},0.05);expect(s.ultimateCd).toBe(0);expect(s.illusions).toHaveLength(0);}
+});
+
+it("spark 2's control guides its incidental follower home instead of becoming a dead Find button",()=>{
+  const s=createMini(0);
+  stepMini(s,{...idle,findSpark:0},0.05);tick(s,80);
+  expect(s.sparks[1]!.following).toBe(true);
+  expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Guide spark 2 HOME",rescued:false});
+  stepMini(s,{...idle,findSpark:1,x:1},0.05);
+  expect(s.destination).toEqual(HOME);tick(s,80);
+  expect(s.sparks[1]!.taken).toBe(true);
+  expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Spark 2 · HOME ✓",rescued:true});
+  const count=s.progress;stepMini(s,{...idle,findSpark:1},0.05);expect(s.progress).toBe(count);
+});
+it("Find spark 2 also works directly from a fresh game",()=>{
+  const s=createMini(0);stepMini(s,{...idle,findSpark:1},0.05);tick(s,80);
+  expect(s.sparks[1]!.following).toBe(true);
+  stepMini(s,{...idle,findSpark:1},0.05);tick(s,80);expect(s.sparks[1]!.taken).toBe(true);
 });

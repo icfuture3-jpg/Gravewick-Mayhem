@@ -2,7 +2,7 @@ import { miniChapter } from "./mini-backstory";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { HERO_ABILITIES } from "./hero-abilities";
 import { SOLO_STORIES, type HeroId } from "./solo-story";
-import { createMini, stepMini, miniBonus, miniPoint, miniObjective, HOME, REPAIR_PARTS, MINI_RULES, type MiniInput } from "./mini-game";
+import { createMini, stepMini, miniBonus, miniPoint, miniObjective, sparkControl, HOME, REPAIR_PARTS, MINI_RULES, type MiniInput } from "./mini-game";
 import { drawMini } from "./mini-game-art";
 
 const button: CSSProperties = {padding: "8px 16px", color: "white", background: "#51317c", border: "2px solid #b392e8", borderRadius: 8, cursor: "pointer", font: "bold 15px Trebuchet MS"};
@@ -66,7 +66,10 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
     <div id="mini-instruction" style={{fontSize: 14, color: "#ead4ff", textAlign: "center"}}>{view.status === "won" ? lore.ending : view.message || "Press Start mini-game when you are ready. Use the playfield or the buttons below."}</div>
     <div role="group" aria-label="Mini-game actions" style={{display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center"}}>
       {hero === 1 ? REPAIR_PARTS.map((p, i) => <button key={i} disabled={disabled} style={{...button, borderColor: view.part === i ? "#ffdc6a" : "#b392e8"}} onClick={() => queue({action: true, aimX: p.x, aimY: p.y})}>Hit part {i + 1}{view.part === i ? " · GOLD" : ""}</button>) : <>
-        {hero === 0 ? state.current.sparks.map((p, i) => <button key={i} disabled={disabled || p.taken || p.following} style={button} onClick={() => walkTo(p)}>Find spark {i + 1}</button>) : state.current.pages.map((p, i) => <button key={i} disabled={disabled || p.taken || view.carrying !== null} style={button} onClick={() => walkTo(p)}>Collect page {i + 1}</button>)}
+        {hero === 0 ? state.current.sparks.map((p, i) => {
+          const control = sparkControl(p, i);
+          return <button key={i} disabled={disabled || control.rescued} style={button} onClick={() => queue({findSpark:i})}>{control.label}</button>;
+        }) : state.current.pages.map((p, i) => <button key={i} disabled={disabled || p.taken || view.carrying !== null} style={button} onClick={() => walkTo(p)}>Collect page {i + 1}</button>)}
         <button disabled={disabled} style={button} onClick={() => hero === 2 ? queue({returnToBook: true}) : walkTo(HOME)}>{hero === 0 ? "Guide sparks HOME" : "Return to BOOK"}</button>
       </>}
     </div>

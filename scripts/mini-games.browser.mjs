@@ -49,8 +49,8 @@ try {
       if(hero===0) {
         const sparks=[[130,150],[330,260],[550,120],[790,230],[740,390]];
         for(let i=0;i<5;i++) {
-          if(await button(`Find spark ${i+1}`).isDisabled()) continue; // A nearby spark can join another on the way home.
-          if(i===0) await canvasClick(...sparks[i]); else await click(`Find spark ${i+1}`);
+          if(await button(`Spark ${i+1} · HOME ✓`).count()) continue; // Incidental followers can arrive together.
+          if(i===0) await canvasClick(...sparks[i]); else if(await button(`Find spark ${i+1}`).count()) await click(`Find spark ${i+1}`);
           await page.clock.runFor(4000);
           await requireText('following');
           await click('Guide sparks HOME'); await page.clock.runFor(4000);
