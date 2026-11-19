@@ -46,7 +46,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
       raf = requestAnimationFrame(draw);
     };
     const move = (e: PointerEvent) => {Object.assign(aim.current, miniPoint(canvas.current!.getBoundingClientRect(), e.clientX, e.clientY));};
-    const click = (e: PointerEvent) => {move(e); queue(hero === 1 ? {action: true} : {moveTo: true});};
+    const click = (e: PointerEvent) => {move(e); keys.clear(); queue(hero === 1 ? {action: true} : {moveTo: true});};
     window.addEventListener("keydown", keydown); window.addEventListener("keyup", keyup); window.addEventListener("blur", blur);
     const node = canvas.current!; node.addEventListener("pointermove", move); node.addEventListener("pointerdown", click);
     raf = requestAnimationFrame(draw);
@@ -65,7 +65,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
     <div role="group" aria-label="Mini-game actions" style={{display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center"}}>
       {hero === 1 ? REPAIR_PARTS.map((p, i) => <button key={i} disabled={disabled} style={{...button, borderColor: view.part === i ? "#ffdc6a" : "#b392e8"}} onClick={() => queue({action: true, aimX: p.x, aimY: p.y})}>Hit part {i + 1}{view.part === i ? " · GOLD" : ""}</button>) : <>
         {hero === 0 ? state.current.sparks.map((p, i) => <button key={i} disabled={disabled || p.taken || p.following} style={button} onClick={() => walkTo(p)}>Find spark {i + 1}</button>) : state.current.pages.map((p, i) => <button key={i} disabled={disabled || p.taken || view.carrying !== null} style={button} onClick={() => walkTo(p)}>Collect page {i + 1}</button>)}
-        <button disabled={disabled} style={button} onClick={() => walkTo(HOME)}>{hero === 0 ? "Guide sparks HOME" : "Return to BOOK"}</button>
+        <button disabled={disabled} style={button} onClick={() => hero === 2 ? queue({returnToBook: true}) : walkTo(HOME)}>{hero === 0 ? "Guide sparks HOME" : "Return to BOOK"}</button>
       </>}
     </div>
     <div role="status" style={{fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : running ? "Playing · No time limit" : state.current.elapsed > 0 ? "Paused · Your progress is safe" : "Ready when you are"}</div>
