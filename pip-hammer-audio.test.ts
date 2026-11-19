@@ -4,7 +4,7 @@ import type {Sound} from "./audio";
 const audio=():Sound=>({tone:vi.fn(),noise:vi.fn(),music:vi.fn(),setMuted:vi.fn(),close:vi.fn(),sample:vi.fn()});
 it.each([0,1])("syncs chapter %i taps to every mallet impact exactly once",chapter=>{
   const s=audio(),times=hammerImpactTimes(chapter);
-  expect(times).toHaveLength(chapter===0?6:4);
+  expect(times).toHaveLength(chapter===0?6:0);
   let prev=0;
   for(const t of times){
     playHammerCues(s,1,chapter,false,prev,t-0.001);

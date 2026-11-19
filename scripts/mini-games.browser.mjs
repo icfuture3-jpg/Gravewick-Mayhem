@@ -23,7 +23,8 @@ async function canvasClick(x,y) {
 async function enter(name) {
   await click('Meet the heroes'); await click(`Select ${name}`);
   await page.getByRole('button',{name:new RegExp(`Play ${name}`)}).click(); await settle();
-  await click('Continue story'); await click('Play this memory');
+  await page.clock.runFor(1600);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-prologue.png`});
+  await click('Continue story');await page.clock.runFor(1800);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-action-1.png`});await click('Play this memory');
 }
 try {
   await page.goto(process.env.GAME_URL || 'http://localhost:5173');
@@ -36,6 +37,7 @@ try {
       // Canvas and keyboard inputs must do nothing before Start.
       await canvasClick(185,180); await page.keyboard.press('KeyJ');
       await requireText(`0/${hero===0?5:hero===1?6:3}`);
+      await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-game-${chapter+1}.png`});
       await click('Start mini-game');
       if(hero===2 && chapter===0) {
         // WASD remains usable alongside click-to-walk and navigation buttons.
@@ -65,6 +67,22 @@ try {
           const rescued=Number((await text()).match(/(\d)\/5 sparks home/)[1]);
           assert.ok(rescued>=i+1, 'Every visited spark must reach home');
         }
+      } else if(hero===1 && chapter===1) {
+        await click('Fit Battery ▤');await requireText('0/6 sockets connected');
+        for(const piece of ['Gear ○','Battery ▤','Spring ϟ','Gear ○','Spring ϟ','Battery ▤'])await click(`Fit ${piece}`);
+      } else if(hero===1 && chapter===2) {
+        for(let lock=0;lock<6;lock++) {
+          if(!await button('Tiny Trouble · L · Ready').count())await page.clock.runFor(13000);
+          await click('Tiny Trouble · L · Ready');
+          await click('Go to next lock');await page.clock.runFor(2500);
+          await click('Open nearby lock · J');await requireText(`${lock+1}/6 locks opened`);
+        }
+      } else if(hero===2 && chapter===1) {
+        assert.equal(await button('Return to BOOK').count(),0);
+        for(let mirror=0;mirror<3;mirror++)for(let turn=0;turn<[1,3,2][mirror];turn++)await click(`Rotate mirror ${mirror+1}`);
+      } else if(hero===2 && chapter===2) {
+        await click('Inscribe star 3');await page.clock.runFor(800);await requireText('0/3 stars inscribed');
+        for(let star=1;star<=3;star++){await click(`Inscribe star ${star}`);await page.clock.runFor(800);await requireText(`${star}/3 stars inscribed`);}
       } else if(hero===1) {
         // A wrong part has no penalty or progress, and is clearly explained.
         await canvasClick(505,255); await page.clock.runFor(350);
@@ -86,9 +104,9 @@ try {
       }
       await requireText('Challenge complete!');
       if(chapter===0) await page.screenshot({path:`/tmp/${name.toLowerCase()}-mini-game-win.png`});
-      await click('Continue tale'); await requireText(chapter===2?'The end':'Memory restored');
+      await click('Continue tale');await page.clock.runFor(1800);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-outro-${chapter+1}.png`}); await requireText(chapter===2?'The end':'Memory restored');
       await click(chapter===2?'Finish tale':'Next chapter');
-      if(chapter<2) await click('Play this memory');
+      if(chapter<2){await page.clock.runFor(1800);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-action-${chapter+2}.png`});await click('Play this memory');}
       console.log(`PASS ${name} chapter ${chapter+1}: normal inputs -> win -> conclusion`);
     }
     await requireText(`${name}'s tale complete`);

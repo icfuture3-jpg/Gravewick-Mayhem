@@ -3,8 +3,8 @@ import type { HeroId } from "./solo-story";
 
 /** Impact is halfway through each of the same seven-second repair swings used by the art. */
 export function hammerImpactTimes(chapter: number): number[] {
-  if (chapter > 1) return [];
-  const count = chapter === 0 ? 6 : 4;
+  if (chapter !== 0) return [];
+  const count = 6;
   return Array.from({length: count}, (_, i) => (i + 0.5) * 7 / count);
 }
 export function playHammerCues(sound: Sound, hero: HeroId, chapter: number, complete: boolean, previous: number, time: number) {

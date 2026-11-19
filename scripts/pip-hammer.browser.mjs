@@ -25,10 +25,11 @@ try {
   await p.getByRole('button',{name:/Play Pip/}).click();
   for(let i=0;i<100&&!await p.getByLabel('Personal story cutscene').count();i++){await new Promise(r=>setTimeout(r,50));await p.clock.runFor(20);}
   await p.getByLabel('Personal story cutscene').waitFor();
-  await p.clock.runFor(7500);
+  await p.clock.runFor(7500);assert.equal((await audit()).wood,0,'Opening tableau does not replay the repair');
+  await click('Continue story');await p.clock.runFor(7500);
   assert.equal((await audit()).wood,6,'Six wooden hammer taps');
   await p.clock.runFor(6000);assert.equal((await audit()).wood,6,'No endless tapping while reading');
-  await click('Sound: on');await click('Continue story');await p.clock.runFor(7500);
+  await click('Sound: on');await click('Back to Gravewick Tales');await click('Select Pip');await p.getByLabel('Personal story cutscene').waitFor();await click('Continue story');await p.clock.runFor(7500);
   assert.equal((await audit()).wood,6,'Muted repair scene is silent');
   await click('Back to Gravewick Tales');assert.equal((await audit()).live,0,'Audio closes on exit');
   assert.equal((await audit()).samples,0,'No thunder or explosion recordings play in Pip repair scenes');

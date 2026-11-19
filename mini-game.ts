@@ -1,16 +1,17 @@
+import { chapterObjective, CIRCUIT, MIRROR_ANGLES, MACHINE_LOCKS, SKY_STARS, MIRRORS } from "./chapter-challenges";
 import { HERO_ABILITIES } from "./hero-abilities";
 import type { StoryMove } from "./story-moves";
 import { miniChapter } from "./mini-backstory";
 import type { HeroId } from "./solo-story";
 
-export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean; ultimate?: boolean; findSpark?: number; guideHome?: boolean}
+export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean; ultimate?: boolean; findSpark?: number; guideHome?: boolean; interact?: number}
 interface Light {x: number; y: number; found: boolean; following: boolean; taken: boolean}
 export interface MiniState {
   hero: HeroId; stage: number; elapsed: number; progress: number; goal: number;
   status: "playing" | "won"; px: number; py: number; invuln: number; message: string;
   destination: {x: number; y: number} | null; guidingHome: boolean;
   sparks: Light[]; pages: {x: number; y: number; taken: boolean}[]; carrying: number | null;
-  bookArrival: number;
+  bookArrival: number; mirrorAngles: number[]; aligned: boolean[];
   primaryCd: number; skillCd: number; ultimateCd: number; tiny: number;
   illusions: {x:number; y:number; remaining:number; shotCd:number}[];
   illusionBolts: {x:number;y:number;tx:number;ty:number;age:number}[];
@@ -30,7 +31,7 @@ export function createMini(hero: HeroId, stage = 0): MiniState {
     status: "playing", px: HOME.x, py: HOME.y, invuln: 0, destination: null, guidingHome: false, message: "",
     sparks: [{x: 130, y: 150}, {x: 330, y: 260}, {x: 550, y: 120}, {x: 790, y: 230}, {x: 740, y: 390}].map((p) => ({...p, found: false, following: false, taken: false})),
     pages: [{x: 185, y: 180}, {x: 735, y: 180}, {x: 770, y: 350}].map((p) => ({...p, taken: false})), carrying: null,
-    bookArrival: 0, primaryCd: 0, skillCd: 0, ultimateCd: 0, tiny: 0, illusions: [], illusionBolts: [], effect: null, projectile: null, hammerHits: 0, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
+    bookArrival: 0, mirrorAngles: [0,0,0], aligned:[false,false,false], primaryCd: 0, skillCd: 0, ultimateCd: 0, tiny: 0, illusions: [], illusionBolts: [], effect: null, projectile: null, hammerHits: 0, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
 }
 export function sparkControl(spark: {following: boolean; taken: boolean}, index: number) {
   const number = index + 1;
@@ -47,6 +48,7 @@ export function shadowPosition(index: number, time: number) {
 const distance = (a: {x: number; y: number}, b: {x: number; y: number}) => Math.hypot(a.x - b.x, a.y - b.y);
 export function miniObjective(s: MiniState): string {
   if (s.status === "won") return "All restored! Choose Continue tale to see what happens next.";
+  const chapter = chapterObjective(s); if(chapter) return chapter;
   if (s.hero === 1) return `Toy ${s.progress + 1}/6 · Hit golden part ${s.part + 1}/3`;
   if (s.hero === 2) return s.carrying === null ? "Find a glowing page — walk to it to pick it up" : "Page collected! Return to the glowing BOOK";
   if(s.stage === 1) return "Walk beside an unlit lantern, then use Lantern Sweep · J to relight it";
@@ -85,8 +87,13 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
   if (s.projectile) {
     const shot = s.projectile; shot.age += dt;
     if (shot.age >= 0.6) {
-      if (shot.move === "gadget" && distance({x:shot.tx,y:shot.ty}, REPAIR_PARTS[s.part]!) <= 25) repair();
-      if (shot.move === "bolt" && s.carrying === null) {
+      if (s.stage === 0 && shot.move === "gadget" && distance({x:shot.tx,y:shot.ty}, REPAIR_PARTS[s.part]!) <= 25) repair();
+      if(shot.move==="bolt" && s.hero===2 && s.stage===2) {
+        const star=SKY_STARS[s.progress];
+        if(star && distance(star,{x:shot.tx,y:shot.ty})<45) remember();
+        else s.message="Aim for the next GOLD star. Your completed lines are safe.";
+      }
+      if (s.stage===0 && shot.move === "bolt" && s.carrying === null) {
         const page = s.pages.findIndex(p => !p.taken && distance(p, {x:shot.tx,y:shot.ty}) < 40);
         if (page !== -1) {s.pages[page]!.taken = true; s.carrying = page; s.message = "Spellbook Bolt retrieved a page! Return to BOOK.";}
       }
@@ -94,22 +101,24 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
     }
   }
   for(const illusion of s.illusions) if(illusion.shotCd <= 0) {
-    const page = s.pages.find(p => !p.taken);
+    const mirror = s.stage===1 ? s.aligned.findIndex(aligned=>!aligned) : -1;
+    const page = s.stage===0 ? s.pages.find(p => !p.taken) : s.stage===2 ? SKY_STARS[s.progress] : mirror>=0 ? MIRRORS[mirror] : undefined;
+    if(mirror>=0){s.mirrorAngles[mirror]=(s.mirrorAngles[mirror]!+1)%4;if(s.mirrorAngles[mirror]===MIRROR_ANGLES[mirror]){s.aligned[mirror]=true;remember();}}
     if(page) {
       s.illusionBolts.push({x:illusion.x+20,y:illusion.y-20,tx:page.x,ty:page.y,age:0});
-      if(s.carrying === null && !s.projectile) s.projectile = {x:illusion.x+20,y:illusion.y-20,tx:page.x,ty:page.y,age:0,gadget:0,move:"bolt"};
+      if(s.stage!==1 && s.carrying === null && !s.projectile) s.projectile = {x:illusion.x+20,y:illusion.y-20,tx:page.x,ty:page.y,age:0,gadget:0,move:"bolt"};
     }
     illusion.shotCd = 0.8;
   }
-  if (s.hero === 1 && input.skill && s.skillCd === 0 && !s.projectile) {
+  if (s.hero === 1 && s.stage===0 && input.skill && s.skillCd === 0 && !s.projectile) {
     s.skillCd = HERO_ABILITIES[1].skillCd;
     s.projectile = {x:400,y:250,tx:input.aimX,ty:input.aimY,age:0,gadget:Math.floor(Math.random()*3),move:"gadget"};
     s.message = "Gadget Pouch — a bouncing gadget repairs the part it hits.";
   }
-  if (s.hero === 2 && input.action && s.primaryCd === 0 && !s.projectile && s.carrying === null) {
+  if (s.hero === 2 && s.stage!==1 && input.action && s.primaryCd === 0 && !s.projectile && s.carrying === null) {
     s.primaryCd = 0.35;
     s.projectile = {x:bookPose(s).x,y:bookPose(s).y,tx:input.aimX,ty:input.aimY,age:0,gadget:0,move:"bolt"};
-    s.message = "Spellbook Bolt — aim at a glowing page to retrieve it.";
+    s.message = s.stage===2 ? "Spellbook Bolt — connect the next GOLD star." : "Spellbook Bolt — aim at a glowing page to retrieve it.";
   }
   if (s.hero === 0 && input.action && s.primaryCd === 0) {
     s.primaryCd = 0.4;
@@ -127,7 +136,12 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
       s.message="Lantern Portal carries you and your following sparks toward your aim.";
     }
   }
-  if (s.hero === 1) {
+  if(s.hero===1 && s.stage===1) {
+    if(input.interact!==undefined || (input.action && s.tiny>0)) {
+      if((input.action && s.tiny>0) || input.interact===CIRCUIT[s.progress]) remember();
+      else s.message="That piece does not match the blueprint. Try the shown shape — no reset.";
+    }
+  } else if (s.hero === 1 && s.stage===0) {
     if (input.action && s.swing === 0) {
       s.hammerHits++;
       s.swing = s.tiny > 0 ? 0.14 : 0.28; s.swingX = input.aimX; s.swingY = input.aimY;
@@ -157,14 +171,27 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
       dx = s.destination.x - s.px; dy = s.destination.y - s.py;
       if (Math.hypot(dx, dy) < 5) {s.px = s.destination.x; s.py = s.destination.y; s.destination = null; s.guidingHome = false; dx = 0; dy = 0;}
     }
-    const len = Math.hypot(dx, dy), speed = s.invuln > 0 ? 150 : 220;
+    const len = Math.hypot(dx, dy), speed = s.tiny>0 ? 330 : s.invuln > 0 ? 150 : 220;
     if (len > 0) {
       const step = Math.min(speed * dt, s.destination ? len : speed * dt);
       s.px = Math.max(35, Math.min(925, s.px + dx / len * step));
       s.py = Math.max(105, Math.min(445, s.py + dy / len * step));
     }
     const player = {x: s.px, y: s.py};
-    if (s.hero === 0 && s.stage > 0) {
+    if(s.hero===1 && s.stage===2) {
+      if(input.action) {
+        const lock=MACHINE_LOCKS[s.progress];
+        if(s.tiny>0 && lock && distance(player,lock)<65) remember();
+        else s.message=s.tiny<=0?"Press L: only tiny Pip fits inside the lock housing.":"Move beside the next red lock, then press J.";
+      }
+    } else if(s.hero===2 && s.stage===1) {
+      if(input.interact!==undefined && input.interact>=0 && input.interact<3 && !s.aligned[input.interact]) {
+        const i=input.interact;s.mirrorAngles[i]=(s.mirrorAngles[i]!+1)%4;
+        if(s.mirrorAngles[i]===MIRROR_ANGLES[i]) {s.aligned[i]=true;remember();}
+      }
+    } else if(s.hero===2 && s.stage===2) {
+      // Stars are inscribed by projectile impacts, not by walking over pages.
+    } else if (s.hero === 0 && s.stage > 0) {
       for(let i=0;i<s.sparks.length;i++) {
         const lantern=s.sparks[i]!;
         if(input.action && !lantern.taken && distance(player,lantern)<80) {

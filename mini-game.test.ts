@@ -1,3 +1,4 @@
+import {CIRCUIT,MIRROR_ANGLES,MACHINE_LOCKS,SKY_STARS} from "./chapter-challenges";
 import { expect, it } from "vitest";
 import { createMini, stepMini, miniBonus, miniPoint, miniObjective, HOME, sparkControl, bookPose, REPAIR_PARTS, shadowPosition, type MiniInput, type MiniState } from "./mini-game";
 import { miniChapter } from "./mini-backstory";
@@ -63,6 +64,10 @@ it.each([0, 1, 2] as const)("hero %i completes all three story chapters with mat
     const s = createMini(hero, stage), lore = miniChapter(hero, stage);
     expect(lore.memories).toHaveLength(s.goal);
     if (hero === 0) for (const spark of s.sparks) {at(s, spark); if(stage===0) at(s, HOME); else stepMini(s,{...idle,action:true},0.05); expect(s.message).toBe(lore.memories[s.progress - 1]);}
+    else if(hero===1 && stage===1) for(const piece of CIRCUIT)stepMini(s,{...idle,interact:piece},0.05);
+    else if(hero===1 && stage===2) for(const lock of MACHINE_LOCKS){s.tiny=6;at(s,lock);stepMini(s,{...idle,action:true},0.05);}
+    else if(hero===2 && stage===1) for(let i=0;i<3;i++)for(let t=0;t<MIRROR_ANGLES[i]!;t++)stepMini(s,{...idle,interact:i},0.05);
+    else if(hero===2 && stage===2) for(const star of SKY_STARS){stepMini(s,{...idle,action:true,aimX:star.x,aimY:star.y},0.05);tick(s,15);}
     else if (hero === 1) for (let toy = 0; toy < 6; toy++) {
       for (const p of REPAIR_PARTS) {stepMini(s, {...idle, action: true, aimX: p.x, aimY: p.y}, 0.05); tick(s, 6);}
       expect(s.progress).toBe(toy + 1); expect(s.message).toBe(lore.memories[toy]);

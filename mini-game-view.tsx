@@ -1,3 +1,4 @@
+import { challengeName, challengeRules, challengeHit, MACHINE_LOCKS, SKY_STARS } from "./chapter-challenges";
 import { createSound } from "./audio";
 import { miniChapter } from "./mini-backstory";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -58,7 +59,13 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
       raf = requestAnimationFrame(draw);
     };
     const move = (e: PointerEvent) => {Object.assign(aim.current, miniPoint(canvas.current!.getBoundingClientRect(), e.clientX, e.clientY));};
-    const click = (e: PointerEvent) => {move(e); keys.clear(); queue(hero === 1 ? {action: true} : {moveTo: true});};
+    const click = (e: PointerEvent) => {
+      move(e); keys.clear();
+      const interact=challengeHit(hero,stage,aim.current.x,aim.current.y);
+      if(stage===1 && (hero===1 || hero===2)) {if(interact!==undefined) queue({interact});}
+      else if(hero===2 && stage===2) queue({action:true});
+      else queue(hero===1 && stage===0 ? {action:true}:{moveTo:true});
+    };
     window.addEventListener("keydown", keydown); window.addEventListener("keyup", keyup); window.addEventListener("blur", blur);
     const node = canvas.current!; node.addEventListener("pointermove", move); node.addEventListener("pointerdown", click);
     raf = requestAnimationFrame(draw);
@@ -68,14 +75,18 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
   const walkTo = (point: {x: number; y: number}) => queue({moveTo: true, aimX: point.x, aimY: point.y});
   const disabled = !running || view.status !== "playing";
   return <div style={{position: "absolute", inset: 0, zIndex: 70, background: "#10091e", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 12, boxSizing: "border-box", overflow: "auto"}}>
-    <h2 style={{margin: 0, color: HERO_ABILITIES[hero].color}}>{HERO_ABILITIES[hero].name} · {SOLO_STORIES[hero].game}</h2>
+    <h2 style={{margin: 0, color: HERO_ABILITIES[hero].color}}>{HERO_ABILITIES[hero].name} · {challengeName(hero,stage)}</h2>
     <div style={{fontSize: 14, color: "#ead4ff", textAlign: "center"}}><b>Memory {stage + 1}/3 · {lore.place}</b> — {lore.objective}</div>
-    <div style={{fontSize: 14, maxWidth: 900, textAlign: "center"}}>{hero === 0 ? grimbleRules(stage) : MINI_RULES[hero]}</div>
-    <div aria-live="polite" style={{color: "#ffd36a", fontWeight: "bold"}}>{view.progress}/{state.current.goal} {hero === 0 ? stage === 0 ? "sparks home" : stage === 1 ? "lanterns relit" : "gate seals activated" : hero === 1 ? "toys repaired" : "pages restored"} · {view.objective}</div>
+    <div style={{fontSize: 14, maxWidth: 900, textAlign: "center"}}>{challengeRules(hero,stage) ?? (hero === 0 ? grimbleRules(stage) : MINI_RULES[hero])}</div>
+    <div aria-live="polite" style={{color: "#ffd36a", fontWeight: "bold"}}>{view.progress}/{state.current.goal} {hero === 0 ? stage === 0 ? "sparks home" : stage === 1 ? "lanterns relit" : "gate seals activated" : hero === 1 ? stage===0 ? "toys repaired" : stage===1 ? "sockets connected" : "locks opened" : stage===0 ? "pages restored" : stage===1 ? "mirrors aligned" : "stars inscribed"} · {view.objective}</div>
     <canvas ref={canvas} width={960} height={480} aria-label={`${SOLO_STORIES[hero].game} playfield`} aria-describedby="mini-instruction" style={{width: "100%", flex: 1, minHeight: 100, objectFit: "contain", cursor: hero === 1 ? "crosshair" : "pointer", touchAction: "none"}} />
     <div id="mini-instruction" style={{fontSize: 14, color: "#ead4ff", textAlign: "center"}}>{view.status === "won" ? lore.ending : view.message || "Press Start mini-game when you are ready. Use the playfield or the buttons below."}</div>
     <div role="group" aria-label="Mini-game actions" style={{display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center"}}>
-      {hero === 1 ? REPAIR_PARTS.map((p, i) => <button key={i} disabled={disabled} style={{...button, borderColor: view.part === i ? "#ffdc6a" : "#b392e8"}} onClick={() => queue({action: true, aimX: p.x, aimY: p.y})}>Hit part {i + 1}{view.part === i ? " · GOLD" : ""}</button>) : <>
+      {hero===1 && stage===1 ? ["Gear ○","Spring ϟ","Battery ▤"].map((name,i)=><button key={name} style={button} disabled={disabled} onClick={()=>queue({interact:i})}>Fit {name}</button>)
+      : hero===1 && stage===2 ? <><button style={button} disabled={disabled} onClick={()=>walkTo(MACHINE_LOCKS[Math.min(5,state.current.progress)]!)}>Go to next lock</button><button style={button} disabled={disabled} onClick={()=>queue({action:true})}>Open nearby lock · J</button></>
+      : hero===2 && stage===1 ? [0,1,2].map(i=><button key={i} style={button} disabled={disabled || state.current.aligned[i]} onClick={()=>queue({interact:i})}>Rotate mirror {i+1}{state.current.aligned[i]?" · ALIGNED":""}</button>)
+      : hero===2 && stage===2 ? SKY_STARS.map((p,i)=><button key={i} style={button} disabled={disabled || i<view.progress} onClick={()=>queue({action:true,aimX:p.x,aimY:p.y})}>Inscribe star {i+1}</button>)
+      : hero === 1 ? REPAIR_PARTS.map((p, i) => <button key={i} disabled={disabled} style={{...button, borderColor: view.part === i ? "#ffdc6a" : "#b392e8"}} onClick={() => queue({action: true, aimX: p.x, aimY: p.y})}>Hit part {i + 1}{view.part === i ? " · GOLD" : ""}</button>) : <>
         {hero === 0 ? state.current.sparks.map((p, i) => {
           const control = hero === 0 && stage > 0
             ? {label:p.taken ? `${stage===1 ? "Lantern" : "Seal"} ${i+1} · DONE ✓` : `Go to ${stage===1 ? "lantern" : "seal"} ${i+1}`,rescued:p.taken}
@@ -87,11 +98,11 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
       </>}
     </div>
     <div role="group" aria-label="Grimoire moves" style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
-      <button style={button} disabled={disabled || (hero === 2 && view.carrying !== null)} onClick={() => queue({action:true, ...(hero === 2 ? {aimX:(state.current.pages.find(p => !p.taken)?.x ?? aim.current.x), aimY:(state.current.pages.find(p => !p.taken)?.y ?? aim.current.y)} : {})})}>{HERO_ABILITIES[hero].primaryName} · J</button>
-      {hero !== 2 && <button style={button} disabled={disabled || view.skillCd > 0} onClick={() => queue({skill:true, ...(hero === 1 ? {aimX:REPAIR_PARTS[state.current.part]!.x,aimY:REPAIR_PARTS[state.current.part]!.y} : {})})}>{HERO_ABILITIES[hero].skillName} · K{view.skillCd > 0 ? ` (${Math.ceil(view.skillCd)}s)` : ""}</button>}
+      <button style={button} disabled={disabled || (stage===1 && hero===2) || (hero === 2 && view.carrying !== null)} onClick={() => queue({action:true, ...(hero === 2 && stage===0 ? {aimX:(state.current.pages.find(p => !p.taken)?.x ?? aim.current.x), aimY:(state.current.pages.find(p => !p.taken)?.y ?? aim.current.y)} : {})})}>{HERO_ABILITIES[hero].primaryName} · J</button>
+      {(hero===0 || (hero===1 && stage===0)) && <button style={button} disabled={disabled || view.skillCd > 0} onClick={() => queue({skill:true, ...(hero === 1 ? {aimX:REPAIR_PARTS[state.current.part]!.x,aimY:REPAIR_PARTS[state.current.part]!.y} : {})})}>{HERO_ABILITIES[hero].skillName} · K{view.skillCd > 0 ? ` (${Math.ceil(view.skillCd)}s)` : ""}</button>}
       <button style={button} disabled={disabled || view.ultimateCd > 0} onClick={() => queue({ultimate:true})}>{HERO_ABILITIES[hero].ultName} · L{view.ultimateCd > 0 ? ` (${Math.ceil(view.ultimateCd)}s)` : " · Ready"}</button>
     </div>
-    <div aria-live="polite" style={{fontSize:14,color:"#ffd36a"}}>{view.tiny > 0 ? `Tiny Trouble active · ${Math.ceil(view.tiny)}s · faster mallet` : view.illusions > 0 ? `${view.illusions} Mirror Illusions active · retrieving pages` : "L ultimate: ready at chapter start, 12s recharge. Pausing freezes recharge."}</div>
+    <div aria-live="polite" style={{fontSize:14,color:"#ffd36a"}}>{view.tiny > 0 ? `Tiny Trouble active · ${Math.ceil(view.tiny)}s · ${stage===2 ? "faster movement" : "faster mallet"}` : view.illusions > 0 ? `${view.illusions} Mirror Illusions active · ${stage===0?"retrieving pages":stage===1?"lighting the mirror targets":"casting constellation bolts"}` : "L ultimate: ready at chapter start, 12s recharge. Pausing freezes recharge."}</div>
     {hero===1 && onMuted && <button style={button} onClick={() => onMuted(!muted)}>Sound: {muted ? "off" : "on"}</button>}
     <div role="status" style={{fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : running ? "Playing · No time limit" : state.current.elapsed > 0 ? "Paused · Your progress is safe" : "Ready when you are"}</div>
     <div style={{display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center"}}>

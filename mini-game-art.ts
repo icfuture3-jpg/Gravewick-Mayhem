@@ -1,3 +1,4 @@
+import { drawChapterChallenge } from "./chapter-art";
 import { drawStoryMove } from "./story-moves";
 import { drawHero } from "./art";
 import { drawFigure } from "./heroes";
@@ -20,18 +21,21 @@ function page(ctx: CanvasRenderingContext2D, x: number, y: number) {
 }
 export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: number, aimY: number) {
   ctx.clearRect(0, 0, 960, 480);
-  if (s.hero === 2) {
+  const uniqueChapter=drawChapterChallenge(ctx,s);
+  if(uniqueChapter) { /* Dedicated chapter layout already drawn. */ } else if (s.hero === 2) {
     ctx.save(); ctx.scale(1, 480 / 360); drawWhimsicalLibrary(ctx, s.elapsed); ctx.restore();
     // Clear walkable reading floor beneath the decorative shelves.
     ctx.fillStyle = "rgba(31,19,48,0.78)"; ctx.beginPath(); ctx.roundRect(85, 105, 790, 350, 28); ctx.fill();
     for (const p of s.pages) if (!p.taken) {page(ctx, p.x, p.y + Math.sin(s.elapsed * 2) * 3); text(ctx, "PAGE", p.x, p.y + 40, "#f3c9ff", 15);}
   } else if (s.hero === 0) {
-    ctx.fillStyle = "#102c30"; ctx.fillRect(0, 0, 960, 480);
-    for (let i = 0; i < 9; i++) {
+    ctx.fillStyle = s.stage===1 ? "#211d35" : s.stage===2 ? "#183245" : "#102c30"; ctx.fillRect(0, 0, 960, 480);
+    if(s.stage===1)for(let i=0;i<6;i++){ctx.fillStyle="#4d435f";ctx.fillRect(i*170,75,24,330);ctx.strokeStyle="#8c799f";ctx.lineWidth=5;ctx.beginPath();ctx.arc(85+i*170,120,73,Math.PI,0);ctx.stroke();}
+    if(s.stage===2)for(let i=0;i<8;i++){ctx.fillStyle="#425565";ctx.fillRect(i*125,70,110,45+(i%2)*20);}
+    for (let i = 0; s.stage===0 && i < 9; i++) {
       ctx.fillStyle = "#253f46"; ctx.beginPath(); ctx.roundRect(30 + i * 106, 90, 40, 70, [20,20,0,0]); ctx.fill();
       text(ctx, "✦", 50 + i * 106, 120, "#637e78", 18);
     }
-    ctx.fillStyle = "#1b3b39"; ctx.beginPath(); ctx.ellipse(480, 310, 440, 170, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = s.stage===0 ? "#1b3b39" : s.stage===1 ? "#343045" : "#283f51"; ctx.beginPath(); ctx.ellipse(480, 310, 440, 170, 0, 0, Math.PI * 2); ctx.fill();
     ring(ctx, s.px, s.py, 130, "#63885d");
     for (let i = 0; i < 3; i++) {
       const p = shadowPosition(i, s.elapsed);
@@ -82,7 +86,7 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     if (hit) ring(ctx, part.x, part.y, 28 + (0.28 - s.swing) * 20, "#fff1a1");
     ring(ctx, aimX, aimY, 7, "#ffffff");
   }
-  if (s.hero !== 1) {
+  if (!uniqueChapter && s.hero !== 1) {
     const homeColor = s.hero === 0 ? "#ffdf8a" : "#e5a7ff";
     if(s.hero!==0 || s.stage===0) ring(ctx, HOME.x, HOME.y, 52, homeColor);
     if (s.hero === 0 && s.stage===0) {
