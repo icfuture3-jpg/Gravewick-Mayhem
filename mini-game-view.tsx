@@ -15,6 +15,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
   const [running, setRunning] = useState(false);
   const [version, setVersion] = useState(0);
   const snapshot = () => ({progress: state.current.progress, status: state.current.status, message: state.current.message,
+    objective: miniObjective(state.current), part: state.current.part, carrying: state.current.carrying, skillCd: state.current.skillCd});
     objective: miniObjective(state.current), part: state.current.part, carrying: state.current.carrying, skillCd: state.current.skillCd, ultimateCd: state.current.ultimateCd, tiny: state.current.tiny, illusions: state.current.illusions.length});
   const [view, setView] = useState(snapshot);
   const actions = useRef<Partial<MiniInput>[]>([]);
@@ -73,6 +74,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
     <div role="group" aria-label="Grimoire moves" style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
       <button style={button} disabled={disabled || (hero === 2 && view.carrying !== null)} onClick={() => queue({action:true, ...(hero === 2 ? {aimX:(state.current.pages.find(p => !p.taken)?.x ?? aim.current.x), aimY:(state.current.pages.find(p => !p.taken)?.y ?? aim.current.y)} : {})})}>{HERO_ABILITIES[hero].primaryName} · J</button>
       {hero !== 2 && <button style={button} disabled={disabled || view.skillCd > 0} onClick={() => queue({skill:true, ...(hero === 1 ? {aimX:REPAIR_PARTS[state.current.part]!.x,aimY:REPAIR_PARTS[state.current.part]!.y} : {})})}>{HERO_ABILITIES[hero].skillName} · K{view.skillCd > 0 ? ` (${Math.ceil(view.skillCd)}s)` : ""}</button>}
+    </div>
       <button style={button} disabled={disabled || view.ultimateCd > 0} onClick={() => queue({ultimate:true})}>{HERO_ABILITIES[hero].ultName} · L{view.ultimateCd > 0 ? ` (${Math.ceil(view.ultimateCd)}s)` : " · Ready"}</button>
     </div>
     <div aria-live="polite" style={{fontSize:14,color:"#ffd36a"}}>{view.tiny > 0 ? `Tiny Trouble active · ${Math.ceil(view.tiny)}s · faster mallet` : view.illusions > 0 ? `${view.illusions} Mirror Illusions active · retrieving pages` : "L ultimate: ready at chapter start, 12s recharge. Pausing freezes recharge."}</div>

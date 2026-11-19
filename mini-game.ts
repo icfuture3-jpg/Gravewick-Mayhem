@@ -3,6 +3,7 @@ import type { StoryMove } from "./story-moves";
 import { miniChapter } from "./mini-backstory";
 import type { HeroId } from "./solo-story";
 
+export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean}
 export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean; ultimate?: boolean}
 interface Light {x: number; y: number; found: boolean; following: boolean; taken: boolean}
 export interface MiniState {
@@ -11,6 +12,7 @@ export interface MiniState {
   destination: {x: number; y: number} | null;
   sparks: Light[]; pages: {x: number; y: number; taken: boolean}[]; carrying: number | null;
   bookArrival: number;
+  primaryCd: number; skillCd: number;
   primaryCd: number; skillCd: number; ultimateCd: number; tiny: number;
   illusions: {x:number; y:number; remaining:number; shotCd:number}[];
   illusionBolts: {x:number;y:number;tx:number;ty:number;age:number}[];
@@ -30,6 +32,7 @@ export function createMini(hero: HeroId, stage = 0): MiniState {
     status: "playing", px: HOME.x, py: HOME.y, invuln: 0, destination: null, message: "",
     sparks: [{x: 130, y: 150}, {x: 330, y: 260}, {x: 550, y: 120}, {x: 790, y: 230}, {x: 740, y: 390}].map((p) => ({...p, found: false, following: false, taken: false})),
     pages: [{x: 185, y: 180}, {x: 735, y: 180}, {x: 770, y: 350}].map((p) => ({...p, taken: false})), carrying: null,
+    bookArrival: 0, primaryCd: 0, skillCd: 0, effect: null, projectile: null, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
     bookArrival: 0, primaryCd: 0, skillCd: 0, ultimateCd: 0, tiny: 0, illusions: [], illusionBolts: [], effect: null, projectile: null, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
 }
 export function shadowPosition(index: number, time: number) {
@@ -170,6 +173,12 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
     s.status = "won"; s.destination = null;
     s.illusions=[];s.illusionBolts=[];s.projectile=null;s.tiny=0;s.effect=null;
   }
+}
+export function bookPose(s: MiniState) {
+  const p = s.bookArrival, ease = p * p * (3 - 2 * p);
+  return {x: HOME.x + (s.px + 55 - HOME.x) * ease,
+    y: HOME.y + (s.py - 65 - HOME.y) * ease - Math.sin(p * Math.PI) * 45,
+    glow: s.status === "won" ? 32 : s.carrying !== null ? 22 : 12};
 }
 export function bookPose(s: MiniState) {
   const p = s.bookArrival, ease = p * p * (3 - 2 * p);
