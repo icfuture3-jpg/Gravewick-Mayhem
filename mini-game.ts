@@ -4,6 +4,7 @@ import { miniChapter } from "./mini-backstory";
 import type { HeroId } from "./solo-story";
 
 export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean}
+export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean; ultimate?: boolean}
 interface Light {x: number; y: number; found: boolean; following: boolean; taken: boolean}
 export interface MiniState {
   hero: HeroId; stage: number; elapsed: number; progress: number; goal: number;
@@ -12,6 +13,9 @@ export interface MiniState {
   sparks: Light[]; pages: {x: number; y: number; taken: boolean}[]; carrying: number | null;
   bookArrival: number;
   primaryCd: number; skillCd: number;
+  primaryCd: number; skillCd: number; ultimateCd: number; tiny: number;
+  illusions: {x:number; y:number; remaining:number; shotCd:number}[];
+  illusionBolts: {x:number;y:number;tx:number;ty:number;age:number}[];
   effect: {move: StoryMove; x: number; y: number; tx: number; ty: number; age: number} | null;
   projectile: {x: number; y: number; tx: number; ty: number; age: number; gadget: number; move: "bolt" | "gadget"} | null;
   part: number; swing: number; swingX: number; swingY: number;
@@ -29,6 +33,7 @@ export function createMini(hero: HeroId, stage = 0): MiniState {
     sparks: [{x: 130, y: 150}, {x: 330, y: 260}, {x: 550, y: 120}, {x: 790, y: 230}, {x: 740, y: 390}].map((p) => ({...p, found: false, following: false, taken: false})),
     pages: [{x: 185, y: 180}, {x: 735, y: 180}, {x: 770, y: 350}].map((p) => ({...p, taken: false})), carrying: null,
     bookArrival: 0, primaryCd: 0, skillCd: 0, effect: null, projectile: null, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
+    bookArrival: 0, primaryCd: 0, skillCd: 0, ultimateCd: 0, tiny: 0, illusions: [], illusionBolts: [], effect: null, projectile: null, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
 }
 export function shadowPosition(index: number, time: number) {
   return {x: 230 + index * 250, y: 220 + Math.sin(time * 0.8 + index * 2) * 85};
@@ -47,6 +52,23 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
     if (s.hero === 2) s.bookArrival = Math.min(1, s.bookArrival + dt / 1.6);
     return;
   }
+  s.ultimateCd = Math.max(0,s.ultimateCd-dt); s.tiny = Math.max(0,s.tiny-dt);
+  s.illusionBolts = s.illusionBolts.filter(b => (b.age += dt) < 0.6);
+  for(const illusion of s.illusions) {illusion.remaining -= dt; illusion.shotCd -= dt;}
+  s.illusions = s.illusions.filter(i => i.remaining > 0);
+  if(input.ultimate) {
+    if(s.ultimateCd > 0) s.message = `${HERO_ABILITIES[s.hero].ultName} recharges in ${Math.ceil(s.ultimateCd)}s.`;
+    else {
+      s.ultimateCd = 12;
+      s.message = `${HERO_ABILITIES[s.hero].ultName} activated!`;
+      if(s.hero === 0) {
+        for(const spark of s.sparks) spark.found = true;
+        s.invuln = 0;
+        s.effect = {move:"light",x:s.px,y:s.py,tx:s.px,ty:s.py,age:0};
+      } else if(s.hero === 1) s.tiny = 6;
+      else s.illusions = [-1,1].map(side => ({x:Math.max(50,Math.min(910,s.px+side*100)),y:s.py-60,remaining:6,shotCd:0}));
+    }
+  }
   s.primaryCd = Math.max(0, s.primaryCd - dt); s.skillCd = Math.max(0, s.skillCd - dt);
   if (s.effect) {s.effect.age += dt; if (s.effect.age >= 0.7) s.effect = null;}
   s.elapsed += dt; s.invuln = Math.max(0, s.invuln - dt); s.swing = Math.max(0, s.swing - dt);
@@ -62,6 +84,14 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
       }
       s.projectile = null;
     }
+  }
+  for(const illusion of s.illusions) if(illusion.shotCd <= 0) {
+    const page = s.pages.find(p => !p.taken);
+    if(page) {
+      s.illusionBolts.push({x:illusion.x+20,y:illusion.y-20,tx:page.x,ty:page.y,age:0});
+      if(s.carrying === null && !s.projectile) s.projectile = {x:illusion.x+20,y:illusion.y-20,tx:page.x,ty:page.y,age:0,gadget:0,move:"bolt"};
+    }
+    illusion.shotCd = 0.8;
   }
   if (s.hero === 1 && input.skill && s.skillCd === 0 && !s.projectile) {
     s.skillCd = HERO_ABILITIES[1].skillCd;
@@ -91,7 +121,7 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
   }
   if (s.hero === 1) {
     if (input.action && s.swing === 0) {
-      s.swing = 0.28; s.swingX = input.aimX; s.swingY = input.aimY;
+      s.swing = s.tiny > 0 ? 0.14 : 0.28; s.swingX = input.aimX; s.swingY = input.aimY;
       if (distance({x: input.aimX, y: input.aimY}, REPAIR_PARTS[s.part]!) <= 25) {
         repair();
       } else s.message = "Aim for the large GOLD ring — no penalty. Try again!";
@@ -139,7 +169,16 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
       } else if (distance(player, HOME) < 55) {s.carrying = null; remember();}
     }
   }
-  if (s.progress >= s.goal) {s.status = "won"; s.destination = null;}
+  if (s.progress >= s.goal) {
+    s.status = "won"; s.destination = null;
+    s.illusions=[];s.illusionBolts=[];s.projectile=null;s.tiny=0;s.effect=null;
+  }
+}
+export function bookPose(s: MiniState) {
+  const p = s.bookArrival, ease = p * p * (3 - 2 * p);
+  return {x: HOME.x + (s.px + 55 - HOME.x) * ease,
+    y: HOME.y + (s.py - 65 - HOME.y) * ease - Math.sin(p * Math.PI) * 45,
+    glow: s.status === "won" ? 32 : s.carrying !== null ? 22 : 12};
 }
 export function bookPose(s: MiniState) {
   const p = s.bookArrival, ease = p * p * (3 - 2 * p);

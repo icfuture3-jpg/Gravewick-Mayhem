@@ -107,3 +107,9 @@ Optional moves help in the existing mini-games without replacing their simple ob
 - Wisp: J **Spellbook Bolt** fires from the quest book toward the mouse to retrieve a page. Its button targets the next uncollected page. She still carries one page at a time and must return it to BOOK; the book's restored arrival animation is unchanged.
 
 Buttons duplicate keyboard actions. Pausing stops moves and cooldowns; restart clears effects, projectiles and cooldowns. No moves award progress after completion.
+
+## L ultimate controls
+
+In personal mini-games, L (or the named ultimate button) is ready at every chapter start and recharges in 12 seconds. Grimble's Hidden Light reveals all lost sparks; Pip's Tiny Trouble shrinks him and his mallet for six seconds and doubles repair swing speed; Wisp's Mirror Illusions deliberately creates two clearly marked, six-second copies that fire bolts to retrieve pages. Her normal story and gallery remain single-Wisp; extra copies exist only during this explicitly activated move. Restart clears copies/effects and restores readiness. Pause freezes all timers.
+
+Team campaign/Endless combat retains its existing 100% charge requirement and full combat ultimates. Pressing L before full charge now displays the current percentage and how to charge it instead of silently doing nothing. Damage and new enemy discoveries charge the shared ultimate meter. Story cutscenes and paused games do not accept combat casts.

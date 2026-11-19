@@ -65,8 +65,11 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     }
     const hit = s.swing > 0, part = hit ? {x: s.swingX, y: s.swingY} : REPAIR_PARTS[s.part]!;
     const hx = part.x - 49, hy = part.y - 8;
-    drawFigure(ctx, 1, hx - 35, hy + 22, 0.65, 0, false, false, s.elapsed);
-    drawMeatMallet(ctx, hx, hy, hit ? Math.sin((1 - s.swing / 0.28) * Math.PI) : 0);
+    drawFigure(ctx, 1, hx - 35, hy + 22, s.tiny > 0 ? 0.29 : 0.65, 0, false, false, s.elapsed);
+    ctx.save();
+    if(s.tiny>0) {ctx.translate(hx,hy);ctx.scale(0.6,0.6);ctx.translate(-hx,-hy);}
+    drawMeatMallet(ctx, hx, hy, hit ? Math.sin((1 - s.swing / (s.tiny > 0 ? 0.14 : 0.28)) * Math.PI) : 0);
+    ctx.restore();
     if (hit) ring(ctx, part.x, part.y, 28 + (0.28 - s.swing) * 20, "#fff1a1");
     ring(ctx, aimX, aimY, 7, "#ffffff");
   }
@@ -98,6 +101,12 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
       ctx.beginPath(); ctx.moveTo(s.px, s.py); ctx.lineTo(HOME.x, HOME.y); ctx.stroke(); ctx.restore();
     }
   }
+  for(const illusion of s.illusions) {
+    ctx.save();ctx.globalAlpha=0.45;
+    drawFigure(ctx,2,illusion.x,illusion.y,0.46,0,false,false,s.elapsed);ctx.restore();
+    text(ctx,"ILLUSION",illusion.x,illusion.y+45,"#eeb6ff",12);
+  }
+  for(const bolt of s.illusionBolts) drawStoryMove(ctx,"bolt",bolt.x,bolt.y,bolt.tx,bolt.ty,bolt.age/0.6);
   if (s.effect) {const e=s.effect;drawStoryMove(ctx,e.move,e.x,e.y,e.tx,e.ty,e.age/0.7);}
   if (s.projectile) {const p=s.projectile;drawStoryMove(ctx,p.move,p.x,p.y,p.tx,p.ty,p.age/0.6,p.gadget);}
   ctx.fillStyle = "rgba(14,8,24,0.92)"; ctx.fillRect(0, 0, 960, 60);

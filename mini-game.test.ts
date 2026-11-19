@@ -129,3 +129,30 @@ it("Grimoire actions cannot alter a completed mini-game", () => {
   const s=createMini(1);s.status="won";const before=structuredClone(s);
   stepMini(s,{...idle,action:true,skill:true},0.05);expect(s).toEqual(before);
 });
+
+it.each([0,1,2] as const)("hero %i can activate L immediately, cannot spam, and restarts ready", hero => {
+  const s=createMini(hero);stepMini(s,{...idle,ultimate:true},0.05);
+  expect(s.ultimateCd).toBe(12);expect(s.message).toContain('activated');
+  stepMini(s,{...idle,ultimate:true},0.05);expect(s.message).toContain('recharges');
+  expect(s.ultimateCd).toBeCloseTo(11.95);expect(createMini(hero).ultimateCd).toBe(0);
+});
+it("Hidden Light reveals every spark, not just nearby ones",()=>{
+  const s=createMini(0);stepMini(s,{...idle,ultimate:true},0.05);
+  expect(s.sparks.every(p=>p.found)).toBe(true);expect(s.progress).toBe(0);
+  expect(s.effect?.move).toBe('light');
+});
+it("Tiny Trouble lasts six seconds and speeds up the repair mallet",()=>{
+  const s=createMini(1);stepMini(s,{...idle,ultimate:true},0.05);expect(s.tiny).toBe(6);
+  const p=REPAIR_PARTS[0]!;stepMini(s,{...idle,action:true,aimX:p.x,aimY:p.y},0.05);
+  expect(s.swing).toBe(0.14);tick(s,121);expect(s.tiny).toBe(0);
+});
+it("Mirror Illusions creates two temporary copies which fire and retrieve a page",()=>{
+  const s=createMini(2);s.px=300;s.py=350;
+  stepMini(s,{...idle,ultimate:true},0.05);
+  expect(s.illusions).toHaveLength(2);expect(s.illusionBolts.length).toBeGreaterThan(0);
+  tick(s,14);expect(s.carrying).not.toBeNull();expect(s.pages.filter(p=>p.taken)).toHaveLength(1);
+  tick(s,121);expect(s.illusions).toHaveLength(0);
+});
+it("L cannot change progress or create copies after completion",()=>{
+  for(const hero of [0,1,2] as const){const s=createMini(hero);s.status='won';stepMini(s,{...idle,ultimate:true},0.05);expect(s.ultimateCd).toBe(0);expect(s.illusions).toHaveLength(0);}
+});
