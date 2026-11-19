@@ -47,3 +47,14 @@ it("shows only one Wisp in every personal story chapter and conclusion", () => {
     expect(drawFigure).toHaveBeenCalledTimes(1);
   }
 });
+
+it("Grimble teleports between portal positions rather than walking through the gap", () => {
+  expect(talePose(0,1,2).heroX).toBe(220);
+  expect(talePose(0,1,4).heroX).toBe(480);
+});
+it("Tiny Trouble holds Pip small for six seconds instead of a looping size wobble", () => {
+  expect(talePose(1,2,0).scale).toBe(1.2);
+  expect(talePose(1,2,0.2).scale).toBe(0.45);
+  expect(talePose(1,2,6.1).scale).toBe(0.45);
+  expect(talePose(1,2,6.3).scale).toBe(1.2);
+});

@@ -1,3 +1,6 @@
+import { HERO_ABILITIES } from "./hero-abilities";
+import { drawMeatMallet } from "./tale-props";
+import { drawStoryMove } from "./story-moves";
 import { drawCutsceneEffects } from "./cutscene-effects";
 import { drawFigure } from "./heroes";
 import { drawEnemy, TAU } from "./art";
@@ -38,7 +41,7 @@ export function drawAction(ctx: CanvasRenderingContext2D, scene: Scene, time: nu
   if (scene.action === "portal") {
     portal(270, 230, 80 * Math.min(1, p * 5));
     portal(620, 230, 80 * Math.min(1, p * 5));
-    hero(0, 220 + p * 350, 270, 1.5);
+    hero(0, p < 0.45 ? 270 : 620, 270, 1.5);
     hero(1, 80 + p * 360, 300 - Math.sin(p * Math.PI) * 80, 1.1);
     hero(2, 150 + p * 320, 220 - Math.sin(p * Math.PI) * 50, 1.2);
     // Lantern beam reveals the ambushers.
@@ -48,9 +51,8 @@ export function drawAction(ctx: CanvasRenderingContext2D, scene: Scene, time: nu
     hero(0, 170, 275, 1.1); hero(2, 300, 245, 1.1);
     hero(1, 330 + p * 300, 305 - Math.sin(p * Math.PI) * 45, tiny);
     const flight = Math.min(1, p / 0.62);
-    ctx.fillStyle = "#c4d443";
-    ctx.beginPath(); ctx.arc(400 + flight * 360, 260 - Math.sin(flight * Math.PI) * 140, 15, 0, TAU); ctx.fill();
-    line(390 + flight * 360, 240 - Math.sin(flight * Math.PI) * 140, 400 + flight * 360, 250 - Math.sin(flight * Math.PI) * 140, "#ff703a");
+    drawMeatMallet(ctx,330+p*300+30,270,Math.sin(p*Math.PI));
+    drawStoryMove(ctx,"gadget",400,260,760,260,flight,scene.stage%3);
   } else if (scene.action === "illusion") {
     hero(0, 160, 285, 1.1); hero(1, 270, 305, 1.1);
     hero(2, 440, 260, 1.45, p < 0.3 ? 1 - p * 2.6 : 0.2);
@@ -85,6 +87,10 @@ export function drawAction(ctx: CanvasRenderingContext2D, scene: Scene, time: nu
       line(770 + Math.cos(a) * 50, 250 + Math.sin(a) * 50, 770 + Math.cos(a) * 135, 250 + Math.sin(a) * 135, "#ffd36a", 4);
     }
   }
+  ctx.fillStyle="#ffe7ad";ctx.font="bold 18px Trebuchet MS";ctx.textAlign="center";
+  const g=HERO_ABILITIES[0],pip=HERO_ABILITIES[1],w=HERO_ABILITIES[2];
+  const names = scene.action === "portal" ? `${g.skillName} · ${g.primaryName}` : scene.action === "gadget" ? `${pip.ultName} · ${pip.skillName} · ${pip.primaryName}` : scene.action === "illusion" ? `${w.skillName} · ${w.ultName} · ${w.primaryName}` : scene.action === "team" ? `${g.ultName} · ${pip.skillName} · ${w.primaryName}` : "";
+  if(names) ctx.fillText(names,480,420);
   ctx.restore();
   drawCutsceneEffects(ctx, scene.action, scene.duration, time, 960, 540,
     typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);

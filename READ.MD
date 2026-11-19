@@ -96,3 +96,20 @@ Effects play once per story beat, not continuously while reading. Tales has a So
 sharing Mayhem's sound preference; it can also enable browser audio if autoplay is blocked.
 Audio closes on cutscene exit. Lightning uses a restrained tint and bolt; the system reduced
 motion preference suppresses lightning flashes. Explosion and thunder now use bundled CC0 audio files instead of noise synthesis; credits are in public/audio/CREDITS.md. Lasers remain synthesized.
+
+## Grimoire moves in stories and mini-games
+
+Story captions and move buttons read names directly from the same `HERO_ABILITIES` definitions as the Grimoire. Personal chapters show Grimble's Lantern Sweep / Lantern Portal / Hidden Light, Pip's Ham Whack / Gadget Pouch / Tiny Trouble, and Wisp's Spellbook Bolt / Invisible Veil / Spellbook Bolt. Pip stays tiny for six seconds; Wisp's veil lasts five seconds. Her personal story keeps one Wisp (no extra mirror copies). Team campaign action scenes retain their intentional combat illusions, now with named Grimoire moves and a visible ham mallet / coloured bouncing gadget.
+
+Optional moves help in the existing mini-games without replacing their simple objectives:
+- Grimble: J **Lantern Sweep** reveals lights within 180px. K **Lantern Portal** teleports toward the mouse up to 260px, carrying following sparks, with the Grimoire's 9s cooldown.
+- Pip: existing mallet repairs use **Ham Whack**. K **Gadget Pouch** launches a randomly selected bouncing dynamite/frost/shock gadget toward the mouse; its landing repairs the highlighted part if aimed correctly (5s cooldown). The button aims at that part automatically. Gadget damage/freeze effects are not simulated against non-enemy toys.
+- Wisp: J **Spellbook Bolt** fires from the quest book toward the mouse to retrieve a page. Its button targets the next uncollected page. She still carries one page at a time and must return it to BOOK; the book's restored arrival animation is unchanged.
+
+Buttons duplicate keyboard actions. Pausing stops moves and cooldowns; restart clears effects, projectiles and cooldowns. No moves award progress after completion.
+
+## L ultimate controls
+
+In personal mini-games, L (or the named ultimate button) is ready at every chapter start and recharges in 12 seconds. Grimble's Hidden Light reveals all lost sparks; Pip's Tiny Trouble shrinks him and his mallet for six seconds and doubles repair swing speed; Wisp's Mirror Illusions deliberately creates two clearly marked, six-second copies that fire bolts to retrieve pages. Her normal story and gallery remain single-Wisp; extra copies exist only during this explicitly activated move. Restart clears copies/effects and restores readiness. Pause freezes all timers.
+
+Team campaign/Endless combat retains its existing 100% charge requirement and full combat ultimates. Pressing L before full charge now displays the current percentage and how to charge it instead of silently doing nothing. Damage and new enemy discoveries charge the shared ultimate meter. Story cutscenes and paused games do not accept combat casts.

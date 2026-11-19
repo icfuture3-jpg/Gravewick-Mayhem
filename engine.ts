@@ -2033,7 +2033,10 @@ export function createBrawl(
     if (g.phase === "playing" && !bookOpen) {
       if (event.code === "KeyJ") pendingActions.add("attack");
       if (event.code === "KeyK") pendingActions.add("skill");
-      if (event.code === "KeyL" || event.code === "Space") pendingActions.add("ultimate");
+      if (event.code === "KeyL" || event.code === "Space") {
+        pendingActions.add("ultimate");
+        if (!event.repeat && g.ult < 100) g.banner = {text:`${HERO_ABILITIES[g.active]!.ultName}: ${Math.floor(g.ult)}% charged`,sub:"L needs 100% charge. Hit monsters and discover enemies to charge it.",t:2.5};
+      }
     }
     if (event.code === "KeyQ") {
       for (let i = 1; i <= 2; i += 1) {
