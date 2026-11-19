@@ -1,7 +1,8 @@
+import { drawStoryMove } from "./story-moves";
 import { drawHero } from "./art";
 import { drawFigure } from "./heroes";
 import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary } from "./tale-props";
-import { HOME, REPAIR_PARTS, miniObjective, shadowPosition, type MiniState } from "./mini-game";
+import { HOME, bookPose, REPAIR_PARTS, miniObjective, shadowPosition, type MiniState } from "./mini-game";
 
 function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, color = "#fff2ca", size = 18) {
   ctx.fillStyle = color; ctx.font = `bold ${size}px Trebuchet MS`; ctx.textAlign = "center"; ctx.fillText(value, x, y);
@@ -76,14 +77,20 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
       ctx.fillStyle = "#a17b3b"; ctx.fillRect(HOME.x - 14, HOME.y - 24, 28, 41);
       ctx.fillStyle = "#ffe68c"; ctx.fillRect(HOME.x - 9, HOME.y - 19, 18, 29);
     } else {
+      const book = bookPose(s);
+      ctx.save(); ctx.translate(book.x - HOME.x, book.y - HOME.y);
+      ctx.shadowColor = "#f2acff"; ctx.shadowBlur = book.glow;
       ctx.fillStyle = "#fff0ce"; ctx.strokeStyle = "#b072da"; ctx.lineWidth = 3;
       ctx.beginPath(); ctx.roundRect(HOME.x - 35, HOME.y - 21, 70, 42, 5); ctx.fill(); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(HOME.x, HOME.y - 21); ctx.lineTo(HOME.x, HOME.y + 21); ctx.stroke();
       for (let i = 0; i < s.progress; i++) text(ctx, "✦", HOME.x - 18 + i * 18, HOME.y + 8, "#a053be", 17);
+      ctx.restore();
     }
     text(ctx, s.hero === 0 ? "HOME" : "BOOK", HOME.x, HOME.y + 43, homeColor, 16);
     const look = s.destination ? Math.atan2(s.destination.y - s.py, s.destination.x - s.px) : 0;
-    drawHero(ctx, s.hero, s.px, s.py, look, s.elapsed, s.invuln > 0, false, 0, s);
+    // Wisp has no extra combat spellbook: the only book is the clickable quest book above.
+    if (s.hero === 2) drawFigure(ctx, 2, s.px, s.py + 3, 0.46, look, false, false, s.elapsed);
+    else drawHero(ctx, s.hero, s.px, s.py, look, s.elapsed, s.invuln > 0, false, 0, s);
     if (s.carrying !== null) page(ctx, s.px + 30, s.py - 35);
     if (s.destination) ring(ctx, s.destination.x, s.destination.y, 12, "#e9d6fa");
     if (s.carrying !== null || s.sparks.some((spark) => spark.following)) {
@@ -91,6 +98,8 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
       ctx.beginPath(); ctx.moveTo(s.px, s.py); ctx.lineTo(HOME.x, HOME.y); ctx.stroke(); ctx.restore();
     }
   }
+  if (s.effect) {const e=s.effect;drawStoryMove(ctx,e.move,e.x,e.y,e.tx,e.ty,e.age/0.7);}
+  if (s.projectile) {const p=s.projectile;drawStoryMove(ctx,p.move,p.x,p.y,p.tx,p.ty,p.age/0.6,p.gadget);}
   ctx.fillStyle = "rgba(14,8,24,0.92)"; ctx.fillRect(0, 0, 960, 60);
   text(ctx, miniObjective(s), 480, 36, "#ffdf8a", 20);
 }
