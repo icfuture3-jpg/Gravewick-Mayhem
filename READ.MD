@@ -112,7 +112,7 @@ Buttons duplicate keyboard actions. Pausing stops moves and cooldowns; restart c
 
 In personal mini-games, L (or the named ultimate button) is ready at every chapter start and recharges in 12 seconds. Grimble's Hidden Light reveals all lost sparks; Pip's Tiny Trouble shrinks him and his mallet for six seconds and doubles repair swing speed; Wisp's Mirror Illusions deliberately creates two clearly marked, six-second copies that fire bolts to retrieve pages. Her normal story and gallery remain single-Wisp; extra copies exist only during this explicitly activated move. Restart clears copies/effects and restores readiness. Pause freezes all timers.
 
-Team campaign/Endless combat retains its existing 100% charge requirement and full combat ultimates. Pressing L before full charge now displays the current percentage and how to charge it instead of silently doing nothing. Damage and new enemy discoveries charge the shared ultimate meter. Story cutscenes and paused games do not accept combat casts.
+In the team campaign and Endless combat, every hero now starts with a ready L / Space ultimate and has an independent meter. Using one hero no longer drains the other two. Each meter refills automatically over 12 seconds of active play (hits and discoveries still accelerate the active hero). The HUD shows readiness and remaining recharge; an early press displays a reminder. One press casts once—holding L does not auto-spend the next charge. Pause, the open Grimoire and cutscenes freeze recharge and do not cast ultimates. New runs reset all three meters to ready. Combat ultimate effects remain unchanged.
 
 ## Grimble's distinct chapter challenges
 

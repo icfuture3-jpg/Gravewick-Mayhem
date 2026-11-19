@@ -212,6 +212,8 @@ export function createBrawl(
   let tutorial = false;
   let practice: PracticeOptions | null = null;
   let soloHero: HeroId | null = null;
+  let ultimateCharges = [100,100,100];
+  let ultimateHintUntil = 0;
   let cast: {hero: number; ultimate: boolean; t: number; x: number; y: number} | null = null;
   const learn = (action: TutorialAction) => { if (tutorial) lesson = advanceLesson(lesson, action); };
   const keys = new Set<string>();
@@ -477,7 +479,9 @@ export function createBrawl(
       const next = heroes.findIndex((o) => o.hp > 0);
       g.shrink = 0;
       g.invisible = 0;
+      ultimateCharges[g.active] = g.ult;
       g.active = next;
+      g.ult = ultimateCharges[next]!;
       g.swapT = 0.5;
       say(next, "I got this!");
     }
@@ -490,7 +494,9 @@ export function createBrawl(
     }
     g.shrink = 0;
     g.invisible = 0;
+    ultimateCharges[g.active] = g.ult;
     g.active = idx;
+    g.ult = ultimateCharges[idx]!;
     learn("swap");
     g.invuln = Math.max(g.invuln, 0.5);
     g.swapT = 0.35;
@@ -618,6 +624,7 @@ export function createBrawl(
       return;
     }
     g.ult = 0;
+    ultimateCharges[g.active] = 0;
     const idx = g.active;
     cast = {hero: idx, ultimate: true, t: 1.1, x: g.px, y: g.py};
     say(idx, HEROES[idx]?.ultName ?? "");
@@ -750,7 +757,9 @@ export function createBrawl(
     g.score = 0;
     g.kills = 0;
     g.combo = 0;
-    g.ult = 0;
+    ultimateCharges = [100,100,100];
+    ultimateHintUntil = 0;
+    g.ult = 100;
     g.active = soloHero ?? 0;
     g.px = W / 2;
     g.py = H / 2 + 60;
@@ -1102,6 +1111,9 @@ export function createBrawl(
       playMovie(soloHero === null ? turningPoint(g.stage) : soloScenes(soloHero, g.stage, "turn"), () => {});
       return;
     }
+    // Independent hero meters recharge only during active gameplay, never in menus/cutscenes.
+    g.ult = Math.min(100,g.ult + dt * (100 / 12));
+    for(let i=0;i<ultimateCharges.length;i++) if(i!==g.active) ultimateCharges[i] = Math.min(100,ultimateCharges[i]! + dt * (100 / 12));
     // Input.
     let mx = 0;
     let my = 0;
@@ -1162,7 +1174,7 @@ export function createBrawl(
     }
     if (keys.has("KeyJ") || mouse.left || pendingActions.has("attack")) primary();
     if (keys.has("KeyK") || mouse.right || pendingActions.has("skill")) skill();
-    if (keys.has("KeyL") || keys.has("Space") || pendingActions.has("ultimate")) ultimate();
+    if (pendingActions.has("ultimate")) ultimate();
     pendingActions.clear();
 
     g.invuln -= dt;
@@ -1519,13 +1531,19 @@ export function createBrawl(
       ctx.fillText("Shift · Dash", bx, by + 24);
       ctx.fillText(h.cdSkill > 0 ? `${Math.ceil(h.cdSkill)}s cooldown` : "Ready", bx + 180, by + 24);
       ctx.fillStyle = g.ult >= 100 ? "#ffd36a" : "#c27aff";
-      ctx.fillText(g.ult >= 100 ? "Ready" : `${Math.floor(g.ult)}% charged`, bx + 390, by + 24);
+      ctx.fillText(g.ult >= 100 ? "L / Space: READY" : `${Math.floor(g.ult)}% · ready in ≤${Math.ceil((100-g.ult)*12/100)}s`, bx + 390, by + 24);
       const status = g.shrink > 0 ? `TINY · ${g.shrink.toFixed(1)}s` : g.invisible > 0 ? `INVISIBLE · ${g.invisible.toFixed(1)}s` :
         decoys.length > 0 ? `${decoys.length} ILLUSIONS` : g.active === 0 ? `${hidden.length} hidden supplies` : "";
       ctx.fillStyle = "#ffd36a";
       ctx.fillText(status, bx + 580, by + 24);
     }
 
+    if(g.time < ultimateHintUntil) {
+      ctx.fillStyle="rgba(10,6,20,0.92)";ctx.fillRect(180,112,600,48);
+      ctx.fillStyle="#ffd36a";ctx.font="bold 16px Trebuchet MS";ctx.textAlign="center";
+      ctx.fillText(`${HERO_ABILITIES[g.active]!.ultName} recharging · ≤${Math.ceil((100-g.ult)*12/100)}s`,W/2,132);
+      ctx.fillText("Each hero has their own L move. Switch heroes or wait; hits recharge faster.",W/2,152);
+    }
     // Grimoire: book icon, new-entry toast, and the open book.
     {
       const bx2 = W - 150;
@@ -2033,9 +2051,9 @@ export function createBrawl(
     if (g.phase === "playing" && !bookOpen) {
       if (event.code === "KeyJ") pendingActions.add("attack");
       if (event.code === "KeyK") pendingActions.add("skill");
-      if (event.code === "KeyL" || event.code === "Space") {
+      if (!event.repeat && (event.code === "KeyL" || event.code === "Space")) {
         pendingActions.add("ultimate");
-        if (!event.repeat && g.ult < 100) g.banner = {text:`${HERO_ABILITIES[g.active]!.ultName}: ${Math.floor(g.ult)}% charged`,sub:"L needs 100% charge. Hit monsters and discover enemies to charge it.",t:2.5};
+        if (!event.repeat && g.ult < 100) ultimateHintUntil = g.time + 2.5;
       }
     }
     if (event.code === "KeyQ") {

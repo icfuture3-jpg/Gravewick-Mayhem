@@ -61,7 +61,8 @@ try {
     await click('Resume');
     await page.keyboard.press('KeyP'); await button('Resume').waitFor();
     await click('Quit to title'); await idle();
-    await click('Gravewick Tales'); await click('Select Grimble');
+    await click('Meet the heroes'); await click('Select Grimble');
+    await page.getByRole('button',{name:/Play Grimble/}).click();
     await button('Continue story').waitFor();
     assert.equal(await page.locator('canvas').count(),1);
     const cutscene=await resources();
