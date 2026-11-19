@@ -50,9 +50,10 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
       const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
       const s = state.current;
       const hitsBefore = s.hammerHits;
+      // Preserve quick repair clicks until the mallet is ready instead of discarding them.
       if (running) stepMini(s, {x: Number(keys.has("KeyD") || keys.has("ArrowRight")) - Number(keys.has("KeyA") || keys.has("ArrowLeft")),
         y: Number(keys.has("KeyS") || keys.has("ArrowDown")) - Number(keys.has("KeyW") || keys.has("ArrowUp")),
-        aimX: aim.current.x, aimY: aim.current.y, ...actions.current.shift()}, dt);
+        aimX: aim.current.x, aimY: aim.current.y, ...(hero===1 && stage===0 && actions.current[0]?.action && s.swing>dt ? {} : actions.current.shift())}, dt);
       if(s.hammerHits > hitsBefore) sound.current?.sample?.("wood",0.75);
       drawMini(ctx, s, aim.current.x, aim.current.y);
       if (now - lastView > 80) {setView(snapshot()); lastView = now;}
@@ -79,7 +80,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
     <h2 style={{margin: 0, color: HERO_ABILITIES[hero].color}}>{HERO_ABILITIES[hero].name} · {challengeName(hero,stage)}</h2>
     <div style={{fontSize: 14, color: "#ead4ff", textAlign: "center"}}><b>{campaign ? "Mayhem objective" : "Personal memory"} · {lore.place}</b> — {lore.objective}</div>
     <div style={{fontSize: 14, maxWidth: 900, textAlign: "center"}}>{challengeRules(hero,stage) ?? (hero === 0 ? grimbleRules(stage) : MINI_RULES[hero])}</div>
-    <div aria-live="polite" style={{color: "#ffd36a", fontWeight: "bold"}}>{view.progress}/{state.current.goal} {hero === 0 ? stage === 0 ? "sparks home" : stage === 1 ? "lanterns relit" : "gate seals activated" : hero === 1 ? stage===0 ? "toys repaired" : stage===1 ? "sockets connected" : "locks opened" : stage===0 ? "pages restored" : stage===1 ? "mirrors aligned" : "stars inscribed"} · {view.objective}</div>
+    <div aria-live="polite" style={{color: "#ffd36a", fontWeight: "bold"}}>{view.progress}/{state.current.goal} {hero === 0 ? stage === 0 ? "shards caught" : stage === 1 ? "lanterns relit" : "gate seals activated" : hero === 1 ? stage===0 ? "toys repaired" : stage===1 ? "sockets connected" : "locks opened" : stage===0 ? "pages restored" : stage===1 ? "mirrors aligned" : "stars inscribed"} · {view.objective}</div>
     <canvas ref={canvas} width={960} height={480} aria-label={`${campaign ? challengeName(hero,stage) : SOLO_STORIES[hero].game} playfield`} aria-describedby="mini-instruction" style={{width: "100%", flex: 1, minHeight: 100, objectFit: "contain", cursor: hero === 1 ? "crosshair" : "pointer", touchAction: "none"}} />
     <div id="mini-instruction" style={{fontSize: 14, color: "#ead4ff", textAlign: "center"}}>{view.status === "won" ? lore.ending : view.message || "Press Start mini-game when you are ready. Use the playfield or the buttons below."}</div>
     <div role="group" aria-label="Mini-game actions" style={{display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center"}}>
@@ -94,8 +95,8 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
             : sparkControl(p, i);
           return <button key={i} disabled={disabled || control.rescued} style={button} onClick={() => queue({findSpark:i})}>{control.label}</button>;
         }) : state.current.pages.map((p, i) => <button key={i} disabled={disabled || p.taken || view.carrying !== null} style={button} onClick={() => walkTo(p)}>Collect page {i + 1}</button>)}
-        {hero !== 0 || stage === 0 ? <button disabled={disabled} style={button} onClick={() => hero === 2 ? queue({returnToBook: true}) : queue({guideHome:true})}>{hero === 0 ? "Guide sparks HOME" : "Return to BOOK"}</button>
-        : <button disabled={disabled} style={button} onClick={() => queue({action:true})}>{stage===1 ? "Light nearby lantern" : "Activate nearby seal"} · J</button>}
+        {hero !== 0 ? <button disabled={disabled} style={button} onClick={() => queue({returnToBook: true})}>Return to BOOK</button>
+        : stage > 0 ? <button disabled={disabled} style={button} onClick={() => queue({action:true})}>{stage===1 ? "Light nearby lantern" : "Activate nearby seal"} · J</button> : null}
       </>}
     </div>
     <div role="group" aria-label="Grimoire moves" style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>

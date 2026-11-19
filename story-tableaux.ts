@@ -1,5 +1,5 @@
 import {drawFigure} from "./heroes";
-import {drawMonsterToy,drawWhimsicalLibrary} from "./tale-props";
+import {drawMonsterToy,drawWhimsicalLibrary,drawWorkshopTable} from "./tale-props";
 import type {HeroId} from "./solo-story";
 
 const TITLES=[['The lonely night watch','The keeper lights remember','A town finds its way home'],['Behind the market stall','The first engine wakes','The nightmare machine sleeps'],['Before the mirror answered','Doubt gives way to courage','An ending written in starlight']] as const;
@@ -14,9 +14,9 @@ export function drawPrologue(ctx:CanvasRenderingContext2D,hero:HeroId,time:numbe
   drawFigure(ctx,0,410,245,0.8,0,false,false,p*4);caption(ctx,"Grimble keeps watch while the town sleeps");
  }else if(hero===1){
   for(let i=0;i<7;i++){ctx.fillStyle=i%2?'#9b5747':'#c69a66';ctx.fillRect(110+i*105,90,105,45);}
-  ctx.fillStyle="#936945";ctx.fillRect(110,220,740,90);
+  drawWorkshopTable(ctx,110,195,740,175);
   for(let i=0;i<3;i++)drawMonsterToy(ctx,i,500+i*85,250,false,0);
-  drawFigure(ctx,1,270+p*90,250,0.9,0,false,false,p*4);caption(ctx,"Pip saves the toys nobody else wanted");
+  drawFigure(ctx,1,270+p*90,250,0.9,0,false,false,p*4,{side:true,speed:p<1?55:0,phase:p*2.6});caption(ctx,"Pip saves the toys nobody else wanted");
  }else{
   drawWhimsicalLibrary(ctx,p*4);ctx.fillStyle="#574071";ctx.fillRect(420,170,115,155);ctx.fillStyle="#b9a4d7";ctx.fillRect(450,200,55,95);
   drawFigure(ctx,2,220+p*60,250,0.9,0,false,false,p*4);caption(ctx,"A whisper leads Wisp down a forgotten aisle");

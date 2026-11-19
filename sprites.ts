@@ -1,5 +1,6 @@
 // Pre-renders the 3D hero models into 2D sprite frames so the canvas game draws the same
 // characters as the "Meet the heroes" screen.
+import { makeWorkshopTable } from "./workshop-table";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
@@ -41,6 +42,8 @@ export function spriteByName(n: string): Sprite | null {
 }
 const FRAMES = 16;
 const PX = 320;
+
+export let workshopTable: HTMLCanvasElement | null = null;
 
 export const sprites: (Sprite | null)[] = NAMES.map(() => null);
 
@@ -106,9 +109,9 @@ async function bakeSprites(): Promise<void> {
     const frames = renderClip(clip, i < 3 ? FRAMES : 10);
     const walkClip = gltf.animations.find((c) => c.name === "run") ?? gltf.animations.find((c) => c.name === "walk");
     const walk = i < 3 && walkClip !== undefined ? renderClip(walkClip, 16) : undefined;
-    // Wisp's library approach uses a real profile view, not a mirrored front-facing run.
+    // Personal approaches use real profile walk clips, not front-facing runs.
     let side: Sprite["side"];
-    if (i === 2) {
+    if (i === 1 || i === 2) {
       cam.position.set(center.x - 20, center.y, center.z);
       cam.lookAt(center);
       const sideWalkClip = gltf.animations.find((c) => c.name === "walk") ?? walkClip;
@@ -128,6 +131,17 @@ async function bakeSprites(): Promise<void> {
   };
 
   try {
+    const table = makeWorkshopTable(); scene.add(table);
+    renderer.setSize(960,360,false);
+    const camera = new THREE.OrthographicCamera(-3.7,3.7,2.3,-2.3,0.1,100);
+    camera.position.set(1.5,4.2,10); camera.lookAt(0,1.2,0);
+    renderer.render(scene,camera);
+    workshopTable = document.createElement("canvas"); workshopTable.width=960; workshopTable.height=360;
+    workshopTable.getContext("2d")?.drawImage(renderer.domElement,0,0);
+    scene.remove(table);
+    const materials = new Set<THREE.Material>();
+    table.traverse(object => {if(object instanceof THREE.Mesh){object.geometry.dispose(); for(const material of Array.isArray(object.material)?object.material:[object.material]) materials.add(material);}});
+    for(const material of materials) material.dispose();
     for (let i = 0; i < URLS.length; i += 1) {
       const gltf = await loader.loadAsync(URLS[i]!);
       bake(i, gltf);

@@ -15,7 +15,7 @@ it.each([0,1,2] as const)("hero %i explains the goal, shows progress and starts 
   expect(html).not.toContain("Continue tale");
   expect(html).not.toContain("Replay pattern");
   expect(html).not.toContain("Change gadget");
-  expect(html).toContain(hero === 0 ? "sparks home" : hero === 1 ? "toys repaired" : "pages restored");
+  expect(html).toContain(hero === 0 ? "shards caught" : hero === 1 ? "toys repaired" : "pages restored");
 });
 it.each([0,1,2] as const)("renders hero %i's playing and completed mini-game without invalid geometry", (hero) => {
   const context = new Proxy({}, {get: () => (...args: unknown[]) => {

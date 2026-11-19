@@ -1,6 +1,6 @@
 import { drawConclusion } from "./story-tableaux";
 import { drawStoryMove, storyMove, moveName } from "./story-moves";
-import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary } from "./tale-props";
+import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary, drawWorkshopTable } from "./tale-props";
 import { drawFigure } from "./heroes";
 import type { HeroId } from "./solo-story";
 
@@ -20,6 +20,16 @@ export function talePose(hero: HeroId, chapter: number, time: number, complete =
     heroX: hero === 2 && chapter === 0 ? 250 + approach * 310 : hero === 0 && chapter === 1 ? (progress < 0.45 ? 220 : 480) : 220 + progress * 280,
     heroY: hero === 2 && chapter === 0 ? 255 : hero === 1 && chapter < 2 ? 220 : 280,
     scale: hero === 1 && chapter === 2 && time >= 0.2 && time < 6.2 && !complete ? 0.45 : 1.2};
+}
+/** Walk in profile to the bench, then take short steps between toys and stop to hammer. */
+export function workshopPose(time: number) {
+  const t=Math.max(0,Math.min(7,time)), approach=1.4, beat=(7-approach)/6;
+  const toy=Math.min(5,Math.floor(Math.max(0,t-approach)/beat));
+  const local=Math.max(0,t-approach-toy*beat), target=450+toy*(320/6);
+  const walking=t<approach || (toy>0 && local<0.25);
+  const heroX=t<approach ? 220+(450-220)*(t/approach) : toy>0 && local<0.25 ? target-320/6+(320/6)*(local/0.25) : target;
+  const strike=Math.max(0,(local-(toy>0?0.25:0))/(beat-(toy>0?0.25:0)));
+  return {toy,heroX,walking,swing:t>=7?0.2:Math.sin(Math.min(1,strike)*Math.PI),fixed:strike>=0.5};
 }
 const mix = (a: number, b: number, t: number) => a + (b - a) * Math.min(1, Math.max(0, t));
 function star(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
@@ -47,7 +57,7 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
       const fall = Math.min(1, p * 2.5); star(ctx, mix(820, 650, fall), mix(20, 245, fall), 26 * (1 - p * 0.4));
       ctx.strokeStyle = "#a68b48"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(840, 10); ctx.lineTo(mix(820, 650, fall), mix(20, 245, fall)); ctx.stroke();
       for (let i = 0; i < 5; i++) {const t = Math.max(0, (p - 0.4 - i * 0.04) * 2.7); ctx.fillStyle = "#ffe697"; star(ctx, mix(650 + Math.cos(i) * 60, lx, t), mix(245 + Math.sin(i) * 40, ly, t), 6);}
-      label(ctx, p < 0.4 ? "A fallen star lights the night" : "Grimble catches its lost sparks in his lantern", 500, 50);
+      label(ctx, p < 0.4 ? "A fallen star lights the night" : "Grimble catches the star shards in his lantern", 500, 50);
     } else if (chapter === 1) {
       for (let i = 0; i < 5; i++) {const x = 550 + i * 70; ctx.fillStyle = "#485351"; ctx.fillRect(x - 22, 180, 44, 115); label(ctx, "Keeper", x, 170); ctx.fillStyle = i / 5 < p ? "#ffd36a" : "#595449"; ctx.fillRect(x - 8, 210, 16, 24);}
       label(ctx, "Grimble relights the missing keepers' lanterns", 480, 50);
@@ -66,19 +76,13 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
       figure(310);drawStoryMove(ctx,"gadget",350,240,760,180,p,1);
       label(ctx,"Pip wires a circuit into his forgotten prototype",480,50);
     } else if (chapter === 0) {
-      ctx.fillStyle = "#795135"; ctx.fillRect(440, 255, 410, 18); ctx.fillRect(470, 270, 18, 60); ctx.fillRect(800, 270, 18, 60);
-      const count = chapter === 0 ? 6 : 4;
-      const beat = Math.min(count - 0.001, p * count), current = Math.floor(beat), swing = Math.sin((beat % 1) * Math.PI);
-      const handX = 490 + current * (320 / count);
-      // Pip stays alongside the current toy, with a short mallet held at hand height.
-      figure(handX - 55);
-      for (let i = 0; i < count; i++) {
-        const fixed = complete || i < current || (i === current && beat % 1 > 0.5);
-        drawMonsterToy(ctx, i, 505 + i * (320 / count), 245, fixed, time);
-      }
-      drawMeatMallet(ctx, handX, 220, complete || p === 1 ? 0.2 : swing);
-      label(ctx, chapter === 0 ? "Pip repairs the market's broken toys" : "Pip rebuilds his first failed prototype", 480, 50);
-      if (p > 0.8) label(ctx, chapter === 0 ? "Six toys spring back to life!" : "The old engine hums again!", 650, 110);
+      drawWorkshopTable(ctx,390,190,500,200);
+      const repair = workshopPose(time);
+      drawFigure(ctx,1,repair.heroX,220,0.9,0,false,false,time,{side:true,speed:repair.walking?55:0,phase:time*0.65});
+      for (let i = 0; i < 6; i++) drawMonsterToy(ctx,i,505+i*(320/6),245,i<repair.toy || (i===repair.toy && repair.fixed),time);
+      if(!repair.walking) drawMeatMallet(ctx,repair.heroX+55,220,repair.swing);
+      label(ctx,"Pip walks to the toys and repairs them",480,50);
+      if(time>=7) label(ctx,"Six toys spring back to life!",650,110);
     } else {
       ctx.fillStyle = "#566166"; ctx.fillRect(540, 70, 320, 240);
       ctx.fillStyle = "#10131d"; ctx.fillRect(540, 255, 320, 55);

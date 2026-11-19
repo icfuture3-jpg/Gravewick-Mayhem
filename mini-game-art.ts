@@ -2,7 +2,7 @@ import { drawChapterChallenge } from "./chapter-art";
 import { drawStoryMove } from "./story-moves";
 import { drawHero } from "./art";
 import { drawFigure } from "./heroes";
-import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary } from "./tale-props";
+import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary, drawWorkshopTable } from "./tale-props";
 import { HOME, bookPose, REPAIR_PARTS, miniObjective, shadowPosition, type MiniState } from "./mini-game";
 
 function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, color = "#fff2ca", size = 18) {
@@ -37,7 +37,7 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     }
     ctx.fillStyle = s.stage===0 ? "#1b3b39" : s.stage===1 ? "#343045" : "#283f51"; ctx.beginPath(); ctx.ellipse(480, 310, 440, 170, 0, 0, Math.PI * 2); ctx.fill();
     ring(ctx, s.px, s.py, 130, "#63885d");
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; s.stage>0 && i < 3; i++) {
       const p = shadowPosition(i, s.elapsed);
       ctx.fillStyle = "#754269"; ctx.beginPath(); ctx.ellipse(p.x, p.y, 27, 22, Math.sin(s.elapsed + i) * 0.15, 0, Math.PI * 2); ctx.fill();
       for (const side of [-1, 1]) {ctx.fillStyle = "#e9a7df"; ctx.beginPath(); ctx.arc(p.x + side * 8, p.y - 4, 3, 0, Math.PI * 2); ctx.fill();}
@@ -51,13 +51,14 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
         text(ctx,`${s.stage===1 ? "LANTERN" : "SEAL"} ${i+1}`,point.x,point.y+52,"#fff1c5",14);
       });
     }
-    for (const spark of s.sparks) if (s.stage===0 && !spark.taken) {
-      if (spark.following) {
-        ctx.setLineDash([5, 7]); ctx.strokeStyle = "#e5cc72"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(spark.x, spark.y); ctx.lineTo(s.px, s.py); ctx.stroke(); ctx.setLineDash([]);
-      }
-      ctx.save(); ctx.shadowColor = "#ffdf76"; ctx.shadowBlur = spark.found ? 20 : 0;
-      text(ctx, spark.found ? "✦" : "?", spark.x, spark.y + 10, spark.found ? "#ffe68e" : "#9eb6a3", spark.found ? 34 : 24); ctx.restore();
+    for (const shard of s.sparks) if (s.stage===0 && !shard.taken) {
+      ctx.save(); ctx.shadowColor="#ffdf76"; ctx.shadowBlur=20;
+      ctx.strokeStyle="#ffe7a2"; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(shard.x,shard.fallY-32); ctx.lineTo(shard.x,shard.fallY-12); ctx.stroke();
+      ctx.fillStyle="#ffe697"; ctx.beginPath();
+      ctx.moveTo(shard.x,shard.fallY-15); ctx.lineTo(shard.x+10,shard.fallY); ctx.lineTo(shard.x,shard.fallY+15); ctx.lineTo(shard.x-10,shard.fallY); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle="#fff7d4"; ctx.beginPath();ctx.moveTo(shard.x,shard.fallY-12);ctx.lineTo(shard.x,shard.fallY+11);ctx.stroke();
+      ctx.restore();
     }
   } else {
     ctx.fillStyle = "#302035"; ctx.fillRect(0, 0, 960, 480);
@@ -67,8 +68,7 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
       drawMonsterToy(ctx, i, x, 170, i < s.progress, s.elapsed);
       text(ctx, i < s.progress ? "FIXED ✓" : `Toy ${i + 1}`, x, 195, i < s.progress ? "#b7e68a" : "#c5b0ca", 14);
     }
-    ctx.fillStyle = "#805c3f"; ctx.beginPath(); ctx.roundRect(280, 310, 420, 25, 8); ctx.fill();
-    ctx.fillStyle = "#503824"; ctx.fillRect(305, 335, 20, 105); ctx.fillRect(655, 335, 20, 105);
+    drawWorkshopTable(ctx,225,240,540,210);
     ctx.save(); ctx.translate(480, 280); ctx.scale(1.7, 1.7);
     drawMonsterToy(ctx, Math.min(5, s.progress), 0, 0, s.status === "won", s.elapsed); ctx.restore();
     if (s.status === "playing") for (let i = 0; i < REPAIR_PARTS.length; i++) {
@@ -78,7 +78,7 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
     }
     const hit = s.swing > 0, part = hit ? {x: s.swingX, y: s.swingY} : REPAIR_PARTS[s.part]!;
     const hx = part.x - 49, hy = part.y - 8;
-    drawFigure(ctx, 1, hx - 35, hy + 22, s.tiny > 0 ? 0.29 : 0.65, 0, false, false, s.elapsed);
+    drawFigure(ctx, 1, hx - 35, hy + 22, s.tiny > 0 ? 0.29 : 0.65, 0, false, false, s.elapsed, {side:true,speed:0,phase:0});
     ctx.save();
     if(s.tiny>0) {ctx.translate(hx,hy);ctx.scale(0.6,0.6);ctx.translate(-hx,-hy);}
     drawMeatMallet(ctx, hx, hy, hit ? Math.sin((1 - s.swing / (s.tiny > 0 ? 0.14 : 0.28)) * Math.PI) : 0);
@@ -88,11 +88,8 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
   }
   if (!uniqueChapter && s.hero !== 1) {
     const homeColor = s.hero === 0 ? "#ffdf8a" : "#e5a7ff";
-    if(s.hero!==0 || s.stage===0) ring(ctx, HOME.x, HOME.y, 52, homeColor);
-    if (s.hero === 0 && s.stage===0) {
-      ctx.fillStyle = "#a17b3b"; ctx.fillRect(HOME.x - 14, HOME.y - 24, 28, 41);
-      ctx.fillStyle = "#ffe68c"; ctx.fillRect(HOME.x - 9, HOME.y - 19, 18, 29);
-    } else if(s.hero===2) {
+    if(s.hero!==0) ring(ctx, HOME.x, HOME.y, 52, homeColor);
+    if(s.hero===2) {
       const book = bookPose(s);
       ctx.save(); ctx.translate(book.x - HOME.x, book.y - HOME.y);
       ctx.shadowColor = "#f2acff"; ctx.shadowBlur = book.glow;
@@ -102,14 +99,14 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
       for (let i = 0; i < s.progress; i++) text(ctx, "✦", HOME.x - 18 + i * 18, HOME.y + 8, "#a053be", 17);
       ctx.restore();
     }
-    if(s.hero!==0 || s.stage===0) text(ctx, s.hero === 0 ? "HOME" : "BOOK", HOME.x, HOME.y + 43, homeColor, 16);
+    if(s.hero!==0) text(ctx, "BOOK", HOME.x, HOME.y + 43, homeColor, 16);
     const look = s.destination ? Math.atan2(s.destination.y - s.py, s.destination.x - s.px) : 0;
     // Wisp has no extra combat spellbook: the only book is the clickable quest book above.
     if (s.hero === 2) drawFigure(ctx, 2, s.px, s.py + 3, 0.46, look, false, false, s.elapsed);
     else drawHero(ctx, s.hero, s.px, s.py, look, s.elapsed, s.invuln > 0, false, 0, s);
     if (s.carrying !== null) page(ctx, s.px + 30, s.py - 35);
     if (s.destination) ring(ctx, s.destination.x, s.destination.y, 12, "#e9d6fa");
-    if (s.carrying !== null || s.sparks.some((spark) => spark.following)) {
+    if (s.carrying !== null) {
       ctx.save(); ctx.setLineDash([8, 8]); ctx.strokeStyle = homeColor; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(s.px, s.py); ctx.lineTo(HOME.x, HOME.y); ctx.stroke(); ctx.restore();
     }
