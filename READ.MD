@@ -50,30 +50,25 @@ Story battles now have automatically advancing, skippable action sequences: the 
 
 ## Gravewick Tales — separate personal story mini-games
 
-The title screen has two distinct entries:
+Open **Meet the heroes**, select Grimble, Pip or Wisp, then choose their personal Tale. The title screen has no Gravewick Tales button. The Mayhem campaign and Endless arena remain separate and unchanged.
 
-- **Play Gravewick Mayhem** starts the original team campaign directly. Its arena combat, training, hero switching, action cutscenes and high scores are unchanged. Endless remains a separate button.
-- **Gravewick Tales** opens a separate character picker. Click Grimble, Pip or Wisp's animated model (or their Play tale button) to begin that character's own story. Meet the Heroes also links to the selected character's Gravewick Tale.
+Each Tale has three chapters: a backstory scene, a playable memory and a conclusion. Complete all three chapters to see the hero's ending. These mini-games never launch the arena or write to Mayhem's leaderboard.
 
-Each Tale contains three chapters: an animated backstory scene, a personal mini-game memory, and a chapter conclusion. Complete all three to see the character's ending. Tales never starts the arena brawler, offers no Continue/Skip to battle controls, and does not affect Mayhem health, waves or high scores. Cutscenes wait for Continue so the story can be read at your pace. A failed memory can be retried or exited; winning offers Continue tale. The ending offers Replay this tale or Choose another character.
+- **Grimble — Lantern Hunt:** click the ground or use WASD/arrows to explore. His lantern automatically reveals nearby fallen-star sparks, keeper embers or gate fragments. Walk close so they follow, then escort them to the glowing HOME lantern. Purple shadows briefly slow Grimble but never steal rescued lights. Rescue five per chapter.
+- **Pip — Monster Toy Workshop:** repair six monster toys/mechanisms per chapter with his meat mallet. Click each large golden broken part in order (three per toy), or aim and press J/Space. Numbered Hit part buttons offer the same actions without precise aiming. Wrong hits have no penalty. Later chapters rebuild his prototype and repair mechanisms that stop the nightmare machine.
+- **Wisp — Lost Library Pages:** explore the whimsical library with click-to-walk or WASD/arrows. Walk close to a glowing page to collect it, then return it to the open BOOK. Carry one at a time and restore three per chapter. There are no rune sequences or memory tests.
 
-- **Grimble — Keeper of the Lost Light / Lantern Hunt:** reveal and collect fallen-star sparks, keeper embers and gate fragments while dodging shadows. WASD/arrows move, J/Space reveals, K portals toward your mouse.
-- **Pip — The Smallest Big Hero / Gadget Gallery:** repair market toys, rebuild a failed invention and disable machine locks. Move with WASD/arrows; aim with the mouse; J/click throws, K cycles gadget types, Space shrinks under the scanner.
-- **Wisp — Beyond the Mirror / Mirror Memory:** unlock the library spellbook, confront doubtful reflections and write its final page. Watch the rune pattern, then repeat with 1–4 or the rune buttons; K replays at a time cost.
-
-Objectives reveal matching backstory memories during play. Mini-games include Start, pause/resume, blur-pause, timeout and retry. Tales points are session-only and isolated from Mayhem's leaderboard; no mid-Tale save is provided. All characters are unlocked. The personal stories use original backstory text and existing animated models, without new external assets or recorded voices.
+The playfield, objective text and live progress explain the next step. Navigation/action buttons provide a keyboard-accessible alternative to the canvas. There is no countdown or failure penalty. Start, pause/resume, blur-pause, restart and exit are available; restart clears the current chapter only. Progress and fixed completion bonuses are session-only. All characters are unlocked. Story art uses existing models and drawn props, without new external assets or voices.
 
 ## Mini-game browser regression checks
 
-Install Chromium once with `bunx playwright install chromium`. Start the app with `bun run dev --port 5173`, then run `bun run test:browser` in another terminal. The real Chromium playthrough uses normal mouse/keyboard/button inputs through all three chapters for each hero, all endings, replay, pause/resume, timeout/retry and exits. It controls browser time for deterministic animation-frame stepping; it does not edit game state or bypass objectives. Set `GAME_URL` only to a reachable local test server to use another port.
-
-Wisp's large rune tiles and the rune buttons both accept clicks; repeated flashes now have blank gaps. Inputs queue in order instead of overwriting rapid clicks. Her progress text shows how many runes were accepted, and the watch phase explains why rune inputs are temporarily disabled. On-screen lantern/portal, gadget/throw/shrink and pattern-replay buttons mirror the keyboard controls. Pause/resume preserves mouse aim; retry resets it, clears input and resets the current chapter.
+Install Chromium once with `bunx playwright install chromium`. Start the app with `bun run dev --port 5173`, then run `bun run test:browser` in another terminal. The Chromium playthrough uses DOM buttons, mouse and keyboard through all nine chapters, all endings, replay, pause/resume, restart and exits. It controls browser time without modifying game state. Set `GAME_URL` only to a reachable local test server to use another port.
 
 ## Acting out Tales descriptions
 
 Tales uses its own chapter-specific animated story renderer rather than Mayhem's generic attack montage. Grimble catches a falling star's sparks, relights keeper lanterns and opens the star gate; Pip repairs toys, rebuilds a prototype and shrinks beneath a scanner to disable locks; Wisp retrieves a floating spellbook from a mirror, confronts a reflection with doubles and writes a page as the dark mirror becomes starlight. Chapter conclusions show the completed action instead of starting the task over. These are stylized 2D props and choreography around the existing animated character sprites—not new skeletal hand animations or rendered movies. Mayhem cutscenes remain unchanged, and voices remain absent.
 
-During mini-games, revealed sparks gain lantern frames, Pip's targets become toys with wheels and stay visibly repaired/disabled when matched, and Wisp's floating book gains writing with each restored memory. Puzzle rules, controls, timing, difficulty, collision sizes and hit areas are unchanged.
+During mini-games, following sparks show a trail home, Pip's monster toys show numbered golden repair rings and completed toys stay repaired, and Wisp carries a visible page while a guide line points to her book.
 
 ## Runtime ownership
 
