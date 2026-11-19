@@ -32,8 +32,8 @@ try {
   await page.clock.install(); await page.clock.pauseAt((await page.evaluate(()=>Date.now()))+1000);
   for(const [hero,name] of ['Grimble','Pip','Wisp'].entries()) {
     await enter(name);
-    for(let chapter=0;chapter<3;chapter++) {
-      await requireText(`Memory ${chapter+1}/3`);
+    for(let chapter=0;chapter<1;chapter++) {
+      await requireText('Personal memory');
       // Canvas and keyboard inputs must do nothing before Start.
       await canvasClick(185,180); await page.keyboard.press('KeyJ');
       await requireText(`0/${hero===0?5:hero===1?6:3}`);
@@ -48,15 +48,7 @@ try {
       assert.equal(await text(),paused,'Paused input must not change progress');
       await click('Resume mini-game');
       if(chapter===0) await page.screenshot({path:`/tmp/${name.toLowerCase()}-mini-game-preview.png`});
-      if(hero===0 && chapter>0) {
-        for(let i=0;i<5;i++) {
-          await click(`Go to ${chapter===1 ? 'lantern' : 'seal'} ${i+1}`);
-          await page.clock.runFor(4000);
-          await click(chapter===1 ? 'Light nearby lantern · J' : 'Activate nearby seal · J');
-          await page.clock.runFor(400);
-          await requireText(`${i+1}/5 ${chapter===1 ? 'lanterns relit' : 'gate seals activated'}`);
-        }
-      } else if(hero===0) {
+      if(hero===0) {
         const sparks=[[130,150],[330,260],[550,120],[790,230],[740,390]];
         for(let i=0;i<5;i++) {
           if(await button(`Spark ${i+1} · HOME ✓`).count()) continue; // Incidental followers can arrive together.
@@ -67,22 +59,6 @@ try {
           const rescued=Number((await text()).match(/(\d)\/5 sparks home/)[1]);
           assert.ok(rescued>=i+1, 'Every visited spark must reach home');
         }
-      } else if(hero===1 && chapter===1) {
-        await click('Fit Battery ▤');await requireText('0/6 sockets connected');
-        for(const piece of ['Gear ○','Battery ▤','Spring ϟ','Gear ○','Spring ϟ','Battery ▤'])await click(`Fit ${piece}`);
-      } else if(hero===1 && chapter===2) {
-        for(let lock=0;lock<6;lock++) {
-          if(!await button('Tiny Trouble · L · Ready').count())await page.clock.runFor(13000);
-          await click('Tiny Trouble · L · Ready');
-          await click('Go to next lock');await page.clock.runFor(2500);
-          await click('Open nearby lock · J');await requireText(`${lock+1}/6 locks opened`);
-        }
-      } else if(hero===2 && chapter===1) {
-        assert.equal(await button('Return to BOOK').count(),0);
-        for(let mirror=0;mirror<3;mirror++)for(let turn=0;turn<[1,3,2][mirror];turn++)await click(`Rotate mirror ${mirror+1}`);
-      } else if(hero===2 && chapter===2) {
-        await click('Inscribe star 3');await page.clock.runFor(800);await requireText('0/3 stars inscribed');
-        for(let star=1;star<=3;star++){await click(`Inscribe star ${star}`);await page.clock.runFor(800);await requireText(`${star}/3 stars inscribed`);}
       } else if(hero===1) {
         // A wrong part has no penalty or progress, and is clearly explained.
         await canvasClick(505,255); await page.clock.runFor(350);
@@ -104,9 +80,9 @@ try {
       }
       await requireText('Challenge complete!');
       if(chapter===0) await page.screenshot({path:`/tmp/${name.toLowerCase()}-mini-game-win.png`});
-      await click('Continue tale');await page.clock.runFor(1800);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-outro-${chapter+1}.png`}); await requireText(chapter===2?'The end':'Memory restored');
-      await click(chapter===2?'Finish tale':'Next chapter');
-      if(chapter<2){await page.clock.runFor(1800);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-action-${chapter+2}.png`});await click('Play this memory');}
+      await click('Continue tale');await page.clock.runFor(1800);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-outro-${chapter+1}.png`}); await requireText('Memory restored');
+      await click('Finish tale');
+
       console.log(`PASS ${name} chapter ${chapter+1}: normal inputs -> win -> conclusion`);
     }
     await requireText(`${name}'s tale complete`);
@@ -121,7 +97,7 @@ try {
   }
   assert.equal(await button('Gravewick Tales').count(),0,'No Tales entry on the title screen');
   assert.deepEqual(errors,[]);
-  console.log('PASS all 9 chapters, 3 endings, replay, restart, pause/resume, keyboard, canvas and action buttons; no browser errors');
+  console.log('PASS all 3 personal mini-games, 3 endings, replay, restart, pause/resume, keyboard, canvas and action buttons; no browser errors');
 } catch(error) {
   console.error(await text()); await page.screenshot({path:'/tmp/mini-game-failure.png'}); throw error;
 } finally {await browser.close();}

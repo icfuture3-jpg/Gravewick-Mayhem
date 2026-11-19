@@ -1,3 +1,4 @@
+import { campaignObjective, type CampaignObjective } from "./campaign-objectives";
 import { playCutsceneCues } from "./cutscene-effects";
 import { soloScenes, SOLO_STORIES, type HeroId } from "./solo-story";
 import { HERO_ABILITIES, GADGETS } from "./hero-abilities";
@@ -33,6 +34,7 @@ export interface Summary {
   mode: Mode;
   practice: boolean;
   soloHero: HeroId | null;
+  campaignObjective: CampaignObjective | null;
 }
 export interface Brawl {
   start(mode: Mode): void;
@@ -212,6 +214,7 @@ export function createBrawl(
   let tutorial = false;
   let practice: PracticeOptions | null = null;
   let soloHero: HeroId | null = null;
+  let objective: CampaignObjective | null = null;
   let ultimateCharges = [100,100,100];
   let ultimateHintUntil = 0;
   let cast: {hero: number; ultimate: boolean; t: number; x: number; y: number} | null = null;
@@ -303,6 +306,7 @@ export function createBrawl(
     mode: g.mode,
     practice: practice !== null,
     soloHero,
+    campaignObjective: objective,
   });
 
   const setPhase = (phase: Phase) => {
@@ -743,6 +747,7 @@ export function createBrawl(
 
   const start = (mode: Mode, hero: HeroId | null = null) => {
     soloHero = hero;
+    objective = null;
     practice = null;
     movie = null;
     bossTurns.clear();
@@ -1268,6 +1273,13 @@ export function createBrawl(
           g.score += 1000;
         }
       } else {
+        objective = g.mode === "story" && soloHero === null ? campaignObjective(g.stage, g.wave) : null;
+        if (objective) {
+          keys.clear(); pendingActions.clear(); mouse.left = false; mouse.right = false;
+          sound.music(false);
+          setPhase("challenge");
+          return;
+        }
         nextWave();
       }
     }
@@ -2112,7 +2124,19 @@ export function createBrawl(
     start,
     startSolo(hero) { start("story", hero); },
     completeChallenge(bonus) {
-      if (soloHero === null || g.phase !== "challenge") return;
+      if (g.phase !== "challenge") return;
+      if (objective !== null) {
+        g.score += Math.max(0, Math.min(1100, Math.floor(Number.isFinite(bonus) ? bonus : 0)));
+        objective = null;
+        keys.clear(); pendingActions.clear(); mouse.left = false; mouse.right = false;
+        // Advance here so this cleared-wave boundary cannot replay the same objective.
+        nextWave();
+        last = performance.now();
+        sound.music(true);
+        setPhase("playing");
+        return;
+      }
+      if (soloHero === null) return;
       g.score += Math.max(0, Math.min(1100, Math.floor(Number.isFinite(bonus) ? bonus : 0)));
       g.ult = Math.max(50, g.ult);
       heroes[soloHero]!.hp = 100;

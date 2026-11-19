@@ -8,7 +8,7 @@ export const startTale = (hero: HeroId): Tale => ({hero, chapter: 0, phase: "int
 export function advanceTale(tale: Tale, event: "continue" | "win", bonus = 0): Tale {
   if (tale.phase === "intro" && event === "continue") return {...tale, phase: "game"};
   if (tale.phase === "game" && event === "win") return {...tale, phase: "outro", score: tale.score + Math.max(0, Math.min(1100, Number.isFinite(bonus) ? Math.floor(bonus) : 0))};
-  if (tale.phase === "outro" && event === "continue") return tale.chapter === 2 ? {...tale, phase: "complete"} : {...tale, chapter: tale.chapter + 1, phase: "intro"};
+  if (tale.phase === "outro" && event === "continue") return {...tale, phase: "complete"};
   return tale;
 }
 export function taleScenes(tale: Tale): Scene[] {

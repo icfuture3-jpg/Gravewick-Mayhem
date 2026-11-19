@@ -7,10 +7,10 @@ import { GameHud } from "./hud";
 import { SOLO_STORIES } from "./solo-story";
 import { miniChapter } from "./mini-backstory";
 
-it.each([0, 1, 2] as const)("runs hero %i's three mini-game chapters without any brawler phase", (hero) => {
+it.each([0, 1, 2] as const)("runs hero %i's single personal mini-game without any brawler phase", (hero) => {
   let tale = startTale(hero);
   expect(taleScenes(tale)[0]!.soloHero).toBe(hero);
-  for (let chapter = 0; chapter < 3; chapter++) {
+  for (let chapter = 0; chapter < 1; chapter++) {
     expect(tale).toMatchObject({hero, chapter, phase: "intro"});
     expect(taleScenes(tale).every((s) => s.soloHero === hero)).toBe(true);
     tale = advanceTale(tale, "continue");
@@ -23,7 +23,7 @@ it.each([0, 1, 2] as const)("runs hero %i's three mini-game chapters without any
     expect(advanceTale(tale, "win", 800)).toBe(tale); // no duplicate score claim
     tale = advanceTale(tale, "continue");
   }
-  expect(tale).toMatchObject({hero, chapter: 2, phase: "complete", score: 2400});
+  expect(tale).toMatchObject({hero, chapter: 0, phase: "complete", score: 800});
   expect(advanceTale(tale, "continue")).toBe(tale);
   expect(startTale(hero)).toMatchObject({chapter: 0, score: 0, phase: "intro"});
 });

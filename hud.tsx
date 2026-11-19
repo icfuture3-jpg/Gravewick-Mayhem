@@ -11,6 +11,7 @@ import type { MayhemSession } from "./mayhem-runtime";
 import { CAMPAIGN_LOCATIONS } from "./locations";
 
 const MayhemRuntime = lazy(() => import("./mayhem-runtime"));
+const MiniGame = lazy(() => import("./mini-game-view").then((module) => ({default: module.MiniGame})));
 const Tales = lazy(() => import("./tales-view").then((module) => ({default: module.Tales})));
 
 const STAGE_LABEL = CAMPAIGN_LOCATIONS.map((location) => location.label);
@@ -151,6 +152,13 @@ export function GameHud({ board }: { board: BoardApi }) {
             </div>
           </div>
         )}
+        {screen === "challenge" && info?.campaignObjective && <Suspense fallback={<RuntimeLoading />}>
+          <MiniGame key={`campaign-${info.stage}-${info.wave}`} campaign
+            hero={info.campaignObjective.hero} stage={info.campaignObjective.stage}
+            muted={muted} onMuted={setMuted}
+            onComplete={(bonus) => brawlRef.current?.completeChallenge(bonus)}
+            onExit={() => brawlRef.current?.quit()} />
+        </Suspense>}
         {screen === "stories" && <StorySelect onStory={beginTale} onBack={() => setScreen("title")} />}
         {screen === "mini" && <Suspense fallback={<RuntimeLoading />}><Tales key={`tale-${miniHero}`} hero={miniHero} muted={muted} onMuted={setMuted} onExit={() => setScreen("stories")} /></Suspense>}
         {screen === "heroes" && <HeroPreview onBack={() => setScreen("title")} onMini={beginTale} />}

@@ -13,7 +13,7 @@ export function StorySelect({onStory, onBack}: {onStory: (hero: HeroId) => void;
       {HERO_ABILITIES.map((h, i) => <div key={h.name} style={{flex: 1, maxWidth: 250, display: "flex", flexDirection: "column", gap: 8, textAlign: "center"}}>
         <HeroCard hero={i as HeroId} selected={false} onClick={() => onStory(i as HeroId)} />
         <b style={{color: h.color}}>{SOLO_STORIES[i]!.title}</b>
-        <span style={{fontSize: 13}}>{SOLO_STORIES[i]!.game} · Three backstory memories</span>
+        <span style={{fontSize: 13}}>{SOLO_STORIES[i]!.game} · One personal mini-game</span>
         <button style={{...button, fontSize: 14, padding: "8px 4px"}} onClick={() => onStory(i as HeroId)}>Play {h.name}'s tale</button>
       </div>)}
     </div>

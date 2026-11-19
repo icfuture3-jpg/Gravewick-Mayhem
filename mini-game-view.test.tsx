@@ -33,3 +33,11 @@ it.each([1,2])("Grimble chapter %i has a different action and no misleading HOME
  expect(html).toContain(stage===1?"Light nearby lantern":"Activate nearby seal");
  expect(html).toContain(stage===1?"Go to lantern 1":"Go to seal 1");
 });
+
+it.each([[0,1],[0,2],[1,1],[1,2],[2,1],[2,2]] as const)("labels moved hero %i stage %i as a campaign objective with a run exit", (hero, stage) => {
+ const html = renderToStaticMarkup(<MiniGame hero={hero} stage={stage} campaign onComplete={()=>{}} onExit={()=>{}} />);
+ expect(html).toContain("Mayhem objective");
+ expect(html).toContain("Quit to main menu");
+ expect(html).not.toContain("Back to Gravewick Tales");
+ expect(html).not.toContain("Memory 2/3");
+});

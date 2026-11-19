@@ -1,3 +1,4 @@
+import { CAMPAIGN_OBJECTIVES } from "./campaign-objectives";
 import { afterEach, expect, it, vi } from "vitest";
 import { soloScenes } from "./solo-story";
 import { createBrawl } from "./engine";
@@ -159,5 +160,35 @@ it("ends a solo run when its hero dies rather than silently swapping to a teamma
   s.tick(2200);
   expect(s.phase.mock.calls.some(([phase]) => phase === "over")).toBe(true);
   expect(s.state().active).toBe(2);
+  s.game.destroy();
+});
+
+it("plays all six relocated objectives between team waves, freezes combat, and resumes exactly once", () => {
+  expect(new Set(CAMPAIGN_OBJECTIVES.flat().map(({hero, stage}) => `${hero}-${stage}`)).size).toBe(6);
+  const s = setup(); s.game.start("story"); s.tick(); s.key("Escape"); s.key("KeyT");
+  for (let stage = 0; stage < 3; stage++) {
+    for (let wave = 1; wave <= 2; wave++) {
+      Object.assign(s.state(), {stage, wave, queue: []}); s.state().banner.t = 0;
+      s.tick();
+      expect(s.phase.mock.lastCall).toMatchObject(["challenge", {campaignObjective: CAMPAIGN_OBJECTIVES[stage]![wave - 1], stage, wave}]);
+      const before = {...s.state()};
+      s.tick(200);
+      expect(s.state()).toMatchObject({wave, score: before.score, px: before.px, py: before.py});
+      s.game.completeChallenge(800);
+      expect(s.phase.mock.lastCall).toMatchObject(["playing", {campaignObjective: null, wave: wave + 1}]);
+      expect(s.state().score).toBe(before.score + 800);
+      s.game.completeChallenge(800);
+      expect(s.state().score).toBe(before.score + 800);
+    }
+  }
+  s.game.start("endless"); s.tick();
+  expect(s.phase.mock.lastCall![1].campaignObjective).toBeNull();
+  s.game.quit(); s.game.start("story"); s.tick(); s.key("Escape"); s.key("KeyT");
+  Object.assign(s.state(), {stage: 0, wave: 1, queue: []}); s.state().banner.t = 0; s.tick();
+  expect(s.phase.mock.lastCall![0]).toBe("challenge");
+  s.game.quit();
+  expect(s.phase.mock.lastCall![0]).toBe("title");
+  s.game.start("endless"); s.tick();
+  expect(s.phase.mock.lastCall![1]).toMatchObject({campaignObjective: null, score: 0});
   s.game.destroy();
 });
