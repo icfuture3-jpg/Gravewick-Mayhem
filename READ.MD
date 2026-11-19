@@ -113,3 +113,9 @@ Buttons duplicate keyboard actions. Pausing stops moves and cooldowns; restart c
 In personal mini-games, L (or the named ultimate button) is ready at every chapter start and recharges in 12 seconds. Grimble's Hidden Light reveals all lost sparks; Pip's Tiny Trouble shrinks him and his mallet for six seconds and doubles repair swing speed; Wisp's Mirror Illusions deliberately creates two clearly marked, six-second copies that fire bolts to retrieve pages. Her normal story and gallery remain single-Wisp; extra copies exist only during this explicitly activated move. Restart clears copies/effects and restores readiness. Pause freezes all timers.
 
 Team campaign/Endless combat retains its existing 100% charge requirement and full combat ultimates. Pressing L before full charge now displays the current percentage and how to charge it instead of silently doing nothing. Damage and new enemy discoveries charge the shared ultimate meter. Story cutscenes and paused games do not accept combat casts.
+
+## Grimble's distinct chapter challenges
+
+The backyard rescues five following sparks at HOME. The crypt instead asks you to walk to five keeper lanterns and use J / Light nearby lantern to relight them; nothing follows and no HOME trip is needed. The final chapter activates five star-gate seals in numbered order, with the next seal highlighted gold and no penalty for a wrong attempt. K portal and L Hidden Light remain available in each chapter.
+
+Guide sparks HOME is a dedicated command: it ignores held movement input until Grimble arrives, explains when no sparks are following, and delivers all followers. Find controls show a following or rescued state instead of silently disabling under the old Find label.

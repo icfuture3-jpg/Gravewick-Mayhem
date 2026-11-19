@@ -3,12 +3,12 @@ import type { StoryMove } from "./story-moves";
 import { miniChapter } from "./mini-backstory";
 import type { HeroId } from "./solo-story";
 
-export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean; ultimate?: boolean}
+export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean; returnToBook?: boolean; skill?: boolean; ultimate?: boolean; findSpark?: number; guideHome?: boolean}
 interface Light {x: number; y: number; found: boolean; following: boolean; taken: boolean}
 export interface MiniState {
   hero: HeroId; stage: number; elapsed: number; progress: number; goal: number;
   status: "playing" | "won"; px: number; py: number; invuln: number; message: string;
-  destination: {x: number; y: number} | null;
+  destination: {x: number; y: number} | null; guidingHome: boolean;
   sparks: Light[]; pages: {x: number; y: number; taken: boolean}[]; carrying: number | null;
   bookArrival: number;
   primaryCd: number; skillCd: number; ultimateCd: number; tiny: number;
@@ -27,10 +27,19 @@ export const MINI_RULES = [
 ] as const;
 export function createMini(hero: HeroId, stage = 0): MiniState {
   return {hero, stage, elapsed: 0, progress: 0, goal: hero === 0 ? 5 : hero === 1 ? 6 : 3,
-    status: "playing", px: HOME.x, py: HOME.y, invuln: 0, destination: null, message: "",
+    status: "playing", px: HOME.x, py: HOME.y, invuln: 0, destination: null, guidingHome: false, message: "",
     sparks: [{x: 130, y: 150}, {x: 330, y: 260}, {x: 550, y: 120}, {x: 790, y: 230}, {x: 740, y: 390}].map((p) => ({...p, found: false, following: false, taken: false})),
     pages: [{x: 185, y: 180}, {x: 735, y: 180}, {x: 770, y: 350}].map((p) => ({...p, taken: false})), carrying: null,
     bookArrival: 0, primaryCd: 0, skillCd: 0, ultimateCd: 0, tiny: 0, illusions: [], illusionBolts: [], effect: null, projectile: null, part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
+}
+export function sparkControl(spark: {following: boolean; taken: boolean}, index: number) {
+  const number = index + 1;
+  return {label: spark.taken ? `Spark ${number} · HOME ✓` : spark.following ? `Guide spark ${number} HOME` : `Find spark ${number}`, rescued: spark.taken};
+}
+export function grimbleRules(stage: number) {
+  return stage === 0 ? MINI_RULES[0] : stage === 1
+    ? "Relight the five keeper lanterns. Walk beside each lantern, then press J or Light nearby lantern. No escorts or HOME trips. K portals; L reveals the crypt. No time limit."
+    : "Open the star gate. Walk to the numbered seal highlighted GOLD, then press J or Activate nearby seal. Follow 1 → 2 → 3 → 4 → 5. No escorts or HOME trips. K portals; L reveals the gate. No time limit.";
 }
 export function shadowPosition(index: number, time: number) {
   return {x: 230 + index * 250, y: 220 + Math.sin(time * 0.8 + index * 2) * 85};
@@ -40,6 +49,8 @@ export function miniObjective(s: MiniState): string {
   if (s.status === "won") return "All restored! Choose Continue tale to see what happens next.";
   if (s.hero === 1) return `Toy ${s.progress + 1}/6 · Hit golden part ${s.part + 1}/3`;
   if (s.hero === 2) return s.carrying === null ? "Find a glowing page — walk to it to pick it up" : "Page collected! Return to the glowing BOOK";
+  if(s.stage === 1) return "Walk beside an unlit lantern, then use Lantern Sweep · J to relight it";
+  if(s.stage === 2) return `Activate golden seal ${Math.min(5,s.progress+1)}/5 with Lantern Sweep · J`;
   const following = s.sparks.filter((spark) => spark.following && !spark.taken).length;
   return following ? `${following} ${following === 1 ? "spark is" : "sparks are"} following — guide them to HOME` : "Find star sparks — your lantern lights the way";
 }
@@ -110,7 +121,7 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
     const x=s.px,y=s.py,dx=input.aimX-x,dy=input.aimY-y,d=Math.hypot(dx,dy);
     if (d>0) {
       s.px=Math.max(35,Math.min(925,x+dx/d*Math.min(260,d))); s.py=Math.max(105,Math.min(445,y+dy/d*Math.min(260,d)));
-      s.destination=null; s.skillCd=HERO_ABILITIES[0].skillCd;
+      s.destination=null; s.guidingHome=false; s.skillCd=HERO_ABILITIES[0].skillCd;
       s.effect={move:"portal",x,y,tx:s.px,ty:s.py,age:0};
       for (const spark of s.sparks) if(spark.following) {spark.x=s.px;spark.y=s.py;}
       s.message="Lantern Portal carries you and your following sparks toward your aim.";
@@ -124,15 +135,26 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
       } else s.message = "Aim for the large GOLD ring — no penalty. Try again!";
     }
   } else {
+    const selectedSpark = s.hero === 0 && input.findSpark !== undefined ? s.sparks[input.findSpark] : undefined;
+    const sparkTarget = selectedSpark && !selectedSpark.taken ? selectedSpark.following && s.stage === 0 ? HOME : selectedSpark : null;
+    if (sparkTarget) {
+      s.guidingHome = s.stage === 0 && !!selectedSpark?.following;
+      s.destination = {x:sparkTarget.x,y:sparkTarget.y};
+      s.message = selectedSpark!.following ? "This spark is following — guiding it HOME." : `Walking to spark ${input.findSpark! + 1}.`;
+    }
+    if(s.hero === 0 && s.stage === 0 && input.guideHome) {
+      s.guidingHome = true; s.destination = {...HOME};
+      s.message = s.sparks.some(p=>p.following) ? "Guiding your following sparks HOME…" : "Walking HOME. Find a spark first if none are following.";
+    }
     const bookClick = s.hero === 2 && input.moveTo && Math.hypot(input.aimX - HOME.x, input.aimY - HOME.y) <= 75;
     const returning = s.hero === 2 && (input.returnToBook || bookClick);
     if (input.moveTo) s.destination = {x: Math.max(35, Math.min(925, input.aimX)), y: Math.max(105, Math.min(445, input.aimY))};
     if (returning) s.destination = {...HOME};
-    let dx = returning ? 0 : input.x, dy = returning ? 0 : input.y;
+    let dx = returning || sparkTarget || s.guidingHome ? 0 : input.x, dy = returning || sparkTarget || s.guidingHome ? 0 : input.y;
     if (dx || dy) s.destination = null;
     else if (s.destination) {
       dx = s.destination.x - s.px; dy = s.destination.y - s.py;
-      if (Math.hypot(dx, dy) < 5) {s.px = s.destination.x; s.py = s.destination.y; s.destination = null; dx = 0; dy = 0;}
+      if (Math.hypot(dx, dy) < 5) {s.px = s.destination.x; s.py = s.destination.y; s.destination = null; s.guidingHome = false; dx = 0; dy = 0;}
     }
     const len = Math.hypot(dx, dy), speed = s.invuln > 0 ? 150 : 220;
     if (len > 0) {
@@ -141,7 +163,15 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
       s.py = Math.max(105, Math.min(445, s.py + dy / len * step));
     }
     const player = {x: s.px, y: s.py};
-    if (s.hero === 0) {
+    if (s.hero === 0 && s.stage > 0) {
+      for(let i=0;i<s.sparks.length;i++) {
+        const lantern=s.sparks[i]!;
+        if(input.action && !lantern.taken && distance(player,lantern)<80) {
+          if(s.stage===1 || i===s.progress) {lantern.taken=true;lantern.found=true;remember();}
+          else s.message=`Follow the GOLD seal: number ${s.progress+1} is next. No penalty.`;
+        }
+      }
+    } else if (s.hero === 0) {
       for (const spark of s.sparks) {
         if (spark.taken) continue;
         const d = distance(player, spark);
@@ -167,7 +197,7 @@ export function stepMini(s: MiniState, input: MiniInput, dt: number) {
     }
   }
   if (s.progress >= s.goal) {
-    s.status = "won"; s.destination = null;
+    s.status = "won"; s.destination = null; s.guidingHome = false;
     s.illusions=[];s.illusionBolts=[];s.projectile=null;s.tiny=0;s.effect=null;
   }
 }

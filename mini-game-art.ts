@@ -38,7 +38,16 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
       ctx.fillStyle = "#754269"; ctx.beginPath(); ctx.ellipse(p.x, p.y, 27, 22, Math.sin(s.elapsed + i) * 0.15, 0, Math.PI * 2); ctx.fill();
       for (const side of [-1, 1]) {ctx.fillStyle = "#e9a7df"; ctx.beginPath(); ctx.arc(p.x + side * 8, p.y - 4, 3, 0, Math.PI * 2); ctx.fill();}
     }
-    for (const spark of s.sparks) if (!spark.taken) {
+    if(s.stage>0) {
+      if(s.stage===2) {ctx.fillStyle="#56456c";ctx.fillRect(390,90,180,210);ctx.fillStyle="#d9b269";ctx.fillRect(470,105,20,s.progress*35);}
+      s.sparks.forEach((point,i)=>{
+        ctx.fillStyle=point.taken ? "#ffe78d" : s.stage===2 && i===s.progress ? "#bb8d3b" : "#394a50";
+        ctx.fillRect(point.x-18,point.y-24,36,48);
+        ring(ctx,point.x,point.y,30,point.taken || (s.stage===2 && i===s.progress) ? "#ffe78d" : "#82988f");
+        text(ctx,`${s.stage===1 ? "LANTERN" : "SEAL"} ${i+1}`,point.x,point.y+52,"#fff1c5",14);
+      });
+    }
+    for (const spark of s.sparks) if (s.stage===0 && !spark.taken) {
       if (spark.following) {
         ctx.setLineDash([5, 7]); ctx.strokeStyle = "#e5cc72"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(spark.x, spark.y); ctx.lineTo(s.px, s.py); ctx.stroke(); ctx.setLineDash([]);
@@ -75,11 +84,11 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
   }
   if (s.hero !== 1) {
     const homeColor = s.hero === 0 ? "#ffdf8a" : "#e5a7ff";
-    ring(ctx, HOME.x, HOME.y, 52, homeColor);
-    if (s.hero === 0) {
+    if(s.hero!==0 || s.stage===0) ring(ctx, HOME.x, HOME.y, 52, homeColor);
+    if (s.hero === 0 && s.stage===0) {
       ctx.fillStyle = "#a17b3b"; ctx.fillRect(HOME.x - 14, HOME.y - 24, 28, 41);
       ctx.fillStyle = "#ffe68c"; ctx.fillRect(HOME.x - 9, HOME.y - 19, 18, 29);
-    } else {
+    } else if(s.hero===2) {
       const book = bookPose(s);
       ctx.save(); ctx.translate(book.x - HOME.x, book.y - HOME.y);
       ctx.shadowColor = "#f2acff"; ctx.shadowBlur = book.glow;
@@ -89,7 +98,7 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
       for (let i = 0; i < s.progress; i++) text(ctx, "✦", HOME.x - 18 + i * 18, HOME.y + 8, "#a053be", 17);
       ctx.restore();
     }
-    text(ctx, s.hero === 0 ? "HOME" : "BOOK", HOME.x, HOME.y + 43, homeColor, 16);
+    if(s.hero!==0 || s.stage===0) text(ctx, s.hero === 0 ? "HOME" : "BOOK", HOME.x, HOME.y + 43, homeColor, 16);
     const look = s.destination ? Math.atan2(s.destination.y - s.py, s.destination.x - s.px) : 0;
     // Wisp has no extra combat spellbook: the only book is the clickable quest book above.
     if (s.hero === 2) drawFigure(ctx, 2, s.px, s.py + 3, 0.46, look, false, false, s.elapsed);

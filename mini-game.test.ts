@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { createMini, stepMini, miniBonus, miniPoint, miniObjective, HOME, bookPose, REPAIR_PARTS, shadowPosition, type MiniInput, type MiniState } from "./mini-game";
+import { createMini, stepMini, miniBonus, miniPoint, miniObjective, HOME, sparkControl, bookPose, REPAIR_PARTS, shadowPosition, type MiniInput, type MiniState } from "./mini-game";
 import { miniChapter } from "./mini-backstory";
 const idle: MiniInput = {x: 0, y: 0, aimX: 480, aimY: 200};
 const tick = (s: MiniState, frames: number) => {for (let i = 0; i < frames; i++) stepMini(s, idle, 0.05);};
@@ -62,7 +62,7 @@ it.each([0, 1, 2] as const)("hero %i completes all three story chapters with mat
   for (let stage = 0; stage < 3; stage++) {
     const s = createMini(hero, stage), lore = miniChapter(hero, stage);
     expect(lore.memories).toHaveLength(s.goal);
-    if (hero === 0) for (const spark of s.sparks) {at(s, spark); at(s, HOME); expect(s.message).toBe(lore.memories[s.progress - 1]);}
+    if (hero === 0) for (const spark of s.sparks) {at(s, spark); if(stage===0) at(s, HOME); else stepMini(s,{...idle,action:true},0.05); expect(s.message).toBe(lore.memories[s.progress - 1]);}
     else if (hero === 1) for (let toy = 0; toy < 6; toy++) {
       for (const p of REPAIR_PARTS) {stepMini(s, {...idle, action: true, aimX: p.x, aimY: p.y}, 0.05); tick(s, 6);}
       expect(s.progress).toBe(toy + 1); expect(s.message).toBe(lore.memories[toy]);
@@ -155,4 +155,38 @@ it("Mirror Illusions creates two temporary copies which fire and retrieve a page
 });
 it("L cannot change progress or create copies after completion",()=>{
   for(const hero of [0,1,2] as const){const s=createMini(hero);s.status='won';stepMini(s,{...idle,ultimate:true},0.05);expect(s.ultimateCd).toBe(0);expect(s.illusions).toHaveLength(0);}
+});
+
+it("spark 2's control guides its incidental follower home instead of becoming a dead Find button",()=>{
+  const s=createMini(0);
+  stepMini(s,{...idle,findSpark:0},0.05);tick(s,80);
+  expect(s.sparks[1]!.following).toBe(true);
+  expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Guide spark 2 HOME",rescued:false});
+  stepMini(s,{...idle,findSpark:1,x:1},0.05);
+  expect(s.destination).toEqual(HOME);tick(s,80);
+  expect(s.sparks[1]!.taken).toBe(true);
+  expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Spark 2 · HOME ✓",rescued:true});
+  const count=s.progress;stepMini(s,{...idle,findSpark:1},0.05);expect(s.progress).toBe(count);
+});
+it("Find spark 2 also works directly from a fresh game",()=>{
+  const s=createMini(0);stepMini(s,{...idle,findSpark:1},0.05);tick(s,80);
+  expect(s.sparks[1]!.following).toBe(true);
+  stepMini(s,{...idle,findSpark:1},0.05);tick(s,80);expect(s.sparks[1]!.taken).toBe(true);
+});
+
+it("Guide HOME overrides lingering movement and delivers followers without repeated clicks",()=>{
+  const s=createMini(0);stepMini(s,{...idle,findSpark:0},0.05);tick(s,80);
+  stepMini(s,{...idle,guideHome:true,x:-1},0.05);
+  for(let i=0;i<120;i++) stepMini(s,{...idle,x:-1},0.05);
+  expect(s.progress).toBeGreaterThanOrEqual(2);expect(s.guidingHome).toBe(false);
+});
+it("crypt lanterns require a nearby sweep, never escorting HOME",()=>{
+  const s=createMini(0,1);at(s,s.sparks[0]!);at(s,HOME);expect(s.progress).toBe(0);
+  at(s,s.sparks[0]!);stepMini(s,{...idle,action:true},0.05);
+  expect(s.progress).toBe(1);expect(s.sparks[0]!.following).toBe(false);
+});
+it("the star gate requires numbered seals in order without resetting a wrong attempt",()=>{
+  const s=createMini(0,2);at(s,s.sparks[1]!);stepMini(s,{...idle,action:true},0.05);expect(s.progress).toBe(0);
+  for(const seal of s.sparks){at(s,seal);stepMini(s,{...idle,action:true},0.05);}
+  expect(s.status).toBe("won");
 });

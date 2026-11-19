@@ -46,11 +46,19 @@ try {
       assert.equal(await text(),paused,'Paused input must not change progress');
       await click('Resume mini-game');
       if(chapter===0) await page.screenshot({path:`/tmp/${name.toLowerCase()}-mini-game-preview.png`});
-      if(hero===0) {
+      if(hero===0 && chapter>0) {
+        for(let i=0;i<5;i++) {
+          await click(`Go to ${chapter===1 ? 'lantern' : 'seal'} ${i+1}`);
+          await page.clock.runFor(4000);
+          await click(chapter===1 ? 'Light nearby lantern · J' : 'Activate nearby seal · J');
+          await page.clock.runFor(400);
+          await requireText(`${i+1}/5 ${chapter===1 ? 'lanterns relit' : 'gate seals activated'}`);
+        }
+      } else if(hero===0) {
         const sparks=[[130,150],[330,260],[550,120],[790,230],[740,390]];
         for(let i=0;i<5;i++) {
-          if(await button(`Find spark ${i+1}`).isDisabled()) continue; // A nearby spark can join another on the way home.
-          if(i===0) await canvasClick(...sparks[i]); else await click(`Find spark ${i+1}`);
+          if(await button(`Spark ${i+1} · HOME ✓`).count()) continue; // Incidental followers can arrive together.
+          if(i===0) await canvasClick(...sparks[i]); else if(await button(`Find spark ${i+1}`).count()) await click(`Find spark ${i+1}`);
           await page.clock.runFor(4000);
           await requireText('following');
           await click('Guide sparks HOME'); await page.clock.runFor(4000);

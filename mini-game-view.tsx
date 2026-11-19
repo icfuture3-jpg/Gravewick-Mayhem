@@ -2,7 +2,7 @@ import { miniChapter } from "./mini-backstory";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { HERO_ABILITIES } from "./hero-abilities";
 import { SOLO_STORIES, type HeroId } from "./solo-story";
-import { createMini, stepMini, miniBonus, miniPoint, miniObjective, HOME, REPAIR_PARTS, MINI_RULES, type MiniInput } from "./mini-game";
+import { createMini, stepMini, miniBonus, miniPoint, miniObjective, sparkControl, grimbleRules, REPAIR_PARTS, MINI_RULES, type MiniInput } from "./mini-game";
 import { drawMini } from "./mini-game-art";
 
 const button: CSSProperties = {padding: "8px 16px", color: "white", background: "#51317c", border: "2px solid #b392e8", borderRadius: 8, cursor: "pointer", font: "bold 15px Trebuchet MS"};
@@ -60,14 +60,20 @@ export function MiniGame({hero, stage = 0, onComplete, onExit}: {
   return <div style={{position: "absolute", inset: 0, zIndex: 70, background: "#10091e", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 12, boxSizing: "border-box", overflow: "auto"}}>
     <h2 style={{margin: 0, color: HERO_ABILITIES[hero].color}}>{HERO_ABILITIES[hero].name} · {SOLO_STORIES[hero].game}</h2>
     <div style={{fontSize: 14, color: "#ead4ff", textAlign: "center"}}><b>Memory {stage + 1}/3 · {lore.place}</b> — {lore.objective}</div>
-    <div style={{fontSize: 14, maxWidth: 900, textAlign: "center"}}>{MINI_RULES[hero]}</div>
-    <div aria-live="polite" style={{color: "#ffd36a", fontWeight: "bold"}}>{view.progress}/{state.current.goal} {hero === 0 ? "sparks home" : hero === 1 ? "toys repaired" : "pages restored"} · {view.objective}</div>
+    <div style={{fontSize: 14, maxWidth: 900, textAlign: "center"}}>{hero === 0 ? grimbleRules(stage) : MINI_RULES[hero]}</div>
+    <div aria-live="polite" style={{color: "#ffd36a", fontWeight: "bold"}}>{view.progress}/{state.current.goal} {hero === 0 ? stage === 0 ? "sparks home" : stage === 1 ? "lanterns relit" : "gate seals activated" : hero === 1 ? "toys repaired" : "pages restored"} · {view.objective}</div>
     <canvas ref={canvas} width={960} height={480} aria-label={`${SOLO_STORIES[hero].game} playfield`} aria-describedby="mini-instruction" style={{width: "100%", flex: 1, minHeight: 100, objectFit: "contain", cursor: hero === 1 ? "crosshair" : "pointer", touchAction: "none"}} />
     <div id="mini-instruction" style={{fontSize: 14, color: "#ead4ff", textAlign: "center"}}>{view.status === "won" ? lore.ending : view.message || "Press Start mini-game when you are ready. Use the playfield or the buttons below."}</div>
     <div role="group" aria-label="Mini-game actions" style={{display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center"}}>
       {hero === 1 ? REPAIR_PARTS.map((p, i) => <button key={i} disabled={disabled} style={{...button, borderColor: view.part === i ? "#ffdc6a" : "#b392e8"}} onClick={() => queue({action: true, aimX: p.x, aimY: p.y})}>Hit part {i + 1}{view.part === i ? " · GOLD" : ""}</button>) : <>
-        {hero === 0 ? state.current.sparks.map((p, i) => <button key={i} disabled={disabled || p.taken || p.following} style={button} onClick={() => walkTo(p)}>Find spark {i + 1}</button>) : state.current.pages.map((p, i) => <button key={i} disabled={disabled || p.taken || view.carrying !== null} style={button} onClick={() => walkTo(p)}>Collect page {i + 1}</button>)}
-        <button disabled={disabled} style={button} onClick={() => hero === 2 ? queue({returnToBook: true}) : walkTo(HOME)}>{hero === 0 ? "Guide sparks HOME" : "Return to BOOK"}</button>
+        {hero === 0 ? state.current.sparks.map((p, i) => {
+          const control = hero === 0 && stage > 0
+            ? {label:p.taken ? `${stage===1 ? "Lantern" : "Seal"} ${i+1} · DONE ✓` : `Go to ${stage===1 ? "lantern" : "seal"} ${i+1}`,rescued:p.taken}
+            : sparkControl(p, i);
+          return <button key={i} disabled={disabled || control.rescued} style={button} onClick={() => queue({findSpark:i})}>{control.label}</button>;
+        }) : state.current.pages.map((p, i) => <button key={i} disabled={disabled || p.taken || view.carrying !== null} style={button} onClick={() => walkTo(p)}>Collect page {i + 1}</button>)}
+        {hero !== 0 || stage === 0 ? <button disabled={disabled} style={button} onClick={() => hero === 2 ? queue({returnToBook: true}) : queue({guideHome:true})}>{hero === 0 ? "Guide sparks HOME" : "Return to BOOK"}</button>
+        : <button disabled={disabled} style={button} onClick={() => queue({action:true})}>{stage===1 ? "Light nearby lantern" : "Activate nearby seal"} · J</button>}
       </>}
     </div>
     <div role="group" aria-label="Grimoire moves" style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
