@@ -23,15 +23,15 @@ export function Tales({hero, onExit, muted = false, onMuted}: {hero: HeroId; onE
     <h1 style={{margin: 0, color: "#ffd36a"}}>Gravewick Tales</h1>
     <h2>{HERO_ABILITIES[hero].name}'s tale complete</h2>
     <h3 style={{color: HERO_ABILITIES[hero].color}}>{title}</h3>
-    <p style={{maxWidth: 700}}>{SOLO_STORIES[hero].ending}</p>
-    <div>Three memories restored · Tales score {tale.score}</div>
+    <p style={{maxWidth: 700}}>{taleScenes(tale)[0]!.text}</p>
+    <div>Personal memory restored · Tales score {tale.score}</div>
     <div style={{display: "flex", gap: 12}}><button style={button} onClick={() => setTale(startTale(hero))}>Replay this tale</button><button style={button} onClick={onExit}>Choose another character</button></div>
     <small>Separate from Gravewick Mayhem · Session-only progress</small>
   </div>;
   return <TaleCutscene key={`${tale.chapter}-${tale.phase}`} scenes={taleScenes(tale)}
     hero={hero} chapter={tale.chapter} complete={tale.phase === "outro"} muted={muted} onMuted={onMuted}
-    label={`Gravewick Tales · ${HERO_ABILITIES[hero].name} · Chapter ${tale.chapter + 1}/3`}
-    nextLabel={tale.phase === "intro" ? "Play this memory" : tale.chapter === 2 ? "Finish tale" : "Next chapter"}
+    label={`Gravewick Tales · ${HERO_ABILITIES[hero].name} · Personal memory`}
+    nextLabel={tale.phase === "intro" ? "Play this memory" : "Finish tale"}
     onNext={() => setTale((current) => advanceTale(current, "continue"))} onExit={onExit} />;
 }
 

@@ -48,27 +48,31 @@ Switching heroes ends shrinking/invisibility so those personal powers cannot tra
 
 Story battles now have automatically advancing, skippable action sequences: the trio enters each stage through lantern portals, Pip shrinks and launches a gadget, and Wisp vanishes behind firing mirror doubles. Boss arrivals get a team charge; each boss crossing half health triggers one counterattack sequence. Each defeated boss gets a finishing move and victory celebration, including the final portal sealing. Gameplay, enemy attacks, health, projectiles and cooldowns pause for the movies, then resume from their existing state. Click/Space advances a beat; Esc skips the current sequence. Endless remains uninterrupted. These use the existing animated models with cinematic magic, explosions, motion lines, camera shake and procedural sound cues—not pre-rendered video or recorded voices.
 
-## Gravewick Tales — separate personal story mini-games
+## Meet the Heroes — one personal mini-game each
 
-Open **Meet the heroes**, select Grimble, Pip or Wisp, then choose their personal Tale. The title screen has no Gravewick Tales button. The Mayhem campaign and Endless arena remain separate and unchanged.
+Open **Meet the heroes**, select a hero and play their Tale. Each has an opening backstory, **one** playable memory and a conclusion:
 
-Each Tale has three chapters: a backstory scene, a playable memory and a conclusion. Complete all three chapters to see the hero's ending. These mini-games never launch the arena or write to Mayhem's leaderboard.
+- **Grimble:** find five fallen-star sparks and guide them HOME.
+- **Pip:** fix six monster toys by hitting each toy's three golden parts in order.
+- **Wisp:** collect three library pages and return each to her spellbook, which then flies to her.
 
-- **Grimble — Lantern Hunt:** click the ground or use WASD/arrows to explore. His lantern automatically reveals nearby fallen-star sparks, keeper embers or gate fragments. Walk close so they follow, then escort them to the glowing HOME lantern. Purple shadows briefly slow Grimble but never steal rescued lights. Rescue five per chapter.
-- **Pip — Monster Toy Workshop:** repair six monster toys/mechanisms per chapter with his meat mallet. Click each large golden broken part in order (three per toy), or aim and press J/Space. Numbered Hit part buttons offer the same actions without precise aiming. Wrong hits have no penalty. Later chapters rebuild his prototype and repair mechanisms that stop the nightmare machine.
-- **Wisp — Lost Library Pages:** explore the whimsical library with click-to-walk or WASD/arrows. Walk close to a glowing page to collect it, then return it to the open BOOK. Carry one at a time and restore three per chapter. There are no rune sequences or memory tests.
+There are no second or third playable chapters in these Tales. Replay, start/pause/resume, restart, shared sound and exits remain. Personal scores are session-only and never submitted to the campaign leaderboard.
 
-The playfield, objective text and live progress explain the next step. Navigation/action buttons provide a keyboard-accessible alternative to the canvas. There is no countdown or failure penalty. Start, pause/resume, blur-pause, restart and exit are available; restart clears the current chapter only. Progress and fixed completion bonuses are session-only. All characters are unlocked. Story art uses existing models and drawn props, without new external assets or voices.
+## Mayhem campaign objectives
+
+The other six activities now appear during **Play Gravewick Mayhem**, between combat waves. Each stage has two objectives: one after wave one and one after wave two.
+
+1. Grimble relights the keeper lanterns; Pip assembles the prototype circuit.
+2. Grimble opens the numbered star-gate seals; Wisp aligns the turning mirrors.
+3. Pip shrinks to open the machine locks; Wisp connects the constellation stars.
+
+Combat, health, projectiles and cooldowns freeze while an objective is open. Complete it and choose **Return to battle** to resume the same run with its fixed completion bonus. Objectives start paused and support pause/resume and restart without resetting the campaign. **Quit to main menu** abandons the run, without submitting an unfinished score. Combat hero selection and health are preserved. Endless remains uninterrupted.
+
+The objectives use the existing models, art, rules and controls: visible blueprint shapes, golden mirror arrows, numbered seals/stars, and L powers. Wrong puzzle inputs do not erase progress. No timer, new external assets or voices.
 
 ## Mini-game browser regression checks
 
-Install Chromium once with `bunx playwright install chromium`. Start the app with `bun run dev --port 5173`, then run `bun run test:browser` in another terminal. The Chromium playthrough uses DOM buttons, mouse and keyboard through all nine chapters, all endings, replay, pause/resume, restart and exits. It controls browser time without modifying game state. Set `GAME_URL` only to a reachable local test server to use another port.
-
-## Acting out Tales descriptions
-
-Tales uses its own chapter-specific animated story renderer rather than Mayhem's generic attack montage. Grimble catches a falling star's sparks, relights keeper lanterns and opens the star gate; Pip repairs toys, rebuilds a prototype and shrinks beneath a scanner to disable locks; Wisp retrieves a floating spellbook from a mirror, confronts a reflection with doubles and writes a page as the dark mirror becomes starlight. Chapter conclusions show the completed action instead of starting the task over. These are stylized 2D props and choreography around the existing animated character sprites—not new skeletal hand animations or rendered movies. Mayhem cutscenes remain unchanged, and voices remain absent.
-
-During mini-games, following sparks show a trail home, Pip's monster toys show numbered golden repair rings and completed toys stay repaired, and Wisp carries a visible page while a guide line points to her book.
+Install Chromium once with `bunx playwright install chromium`. Start `bun run dev --port 5173`, then run `bun run test:browser`. The Chromium playthrough completes all three personal memories and endings using ordinary inputs, including replay, pause/resume and restart. It controls browser time without editing game state. Engine tests separately cover all six campaign objective boundaries, paused combat, single bonus claims, resume and new-run reset. Set `GAME_URL` only to a reachable local test server to use another port.
 
 ## Runtime ownership
 
@@ -114,23 +118,14 @@ In personal mini-games, L (or the named ultimate button) is ready at every chapt
 
 In the team campaign and Endless combat, every hero now starts with a ready L / Space ultimate and has an independent meter. Using one hero no longer drains the other two. Each meter refills automatically over 12 seconds of active play (hits and discoveries still accelerate the active hero). The HUD shows readiness and remaining recharge; an early press displays a reminder. One press casts once—holding L does not auto-spend the next charge. Pause, the open Grimoire and cutscenes freeze recharge and do not cast ultimates. New runs reset all three meters to ready. Combat ultimate effects remain unchanged.
 
-## Grimble's distinct chapter challenges
+## Grimble's star rescue controls
 
-The backyard rescues five following sparks at HOME. The crypt instead asks you to walk to five keeper lanterns and use J / Light nearby lantern to relight them; nothing follows and no HOME trip is needed. The final chapter activates five star-gate seals in numbered order, with the next seal highlighted gold and no penalty for a wrong attempt. K portal and L Hidden Light remain available in each chapter.
-
-Guide sparks HOME is a dedicated command: it ignores held movement input until Grimble arrives, explains when no sparks are following, and delivers all followers. Find controls show a following or rescued state instead of silently disabling under the old Find label.
+Guide sparks HOME ignores held movement until Grimble arrives and delivers all followers. Find controls show following or rescued states. The keeper-lantern and star-gate tasks use their original controls during Mayhem campaign objectives, not additional personal memories.
 
 ## Pip's wooden toy-repair audio
 
 Pip's story mallet cues and playable mini-game swings use a bundled original 140ms wood knock, with damped inharmonic resonances and a short contact click instead of pitched beeps. A playable accepted mallet swing triggers one knock; idle drawing, cooldown-blocked input, pause and muted play do not. The mini-game shares the story's sound preference and exposes a Sound toggle. Audio closes on exit. Grimble's thunder and all other heroes' audio are unchanged.
 
-## Unique personal-story chapters
+## Story art
 
-Each first chapter now opens with a separate prologue tableau instead of restarting the action animation on Continue story. All nine conclusions have their own reward compositions, not another run of the task. Story staging stops at its final pose after seven seconds rather than looping while reading. The same character models and signature moves remain shared deliberately, but chapter sequences and objectives are not replayed.
-
-Nine distinct mini-games:
-- Grimble: backyard spark escort; crypt lantern lighting; numbered star-gate seals.
-- Pip: market monster-toy hammer repair (wood knocks retained); visible-shape circuit assembly on a blueprint desk; shrinking to open nearby locks inside the nightmare machine.
-- Wisp: library page rescue and returning to BOOK (glowing-book flight retained); rotating mirrors toward visible target arrows in a vaulted hall; inscribing ordered constellation stars with bolts on the observatory roof.
-
-Later Pip/Wisp chapters no longer repeat toy repair or page fetching. Instructions, control buttons, progress counters, error hints and scenery reflect the specific task. Wrong puzzle inputs do not erase completed work. Start/pause/restart/exit, ready L moves, shared mute, single-Wisp normal scenes and Grimble's thunder remain. Extra Wisp copies only appear when L is deliberately activated.
+Each personal memory opens with a separate prologue tableau, followed by its action scene and a distinct reward composition. Story staging holds its final pose after seven seconds rather than looping while reading. Character models and signature effects remain shared deliberately. The other six playfields remain distinct but are reached through the campaign instead of Meet the Heroes.
