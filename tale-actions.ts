@@ -1,3 +1,4 @@
+import { drawConclusion } from "./story-tableaux";
 import { drawStoryMove, storyMove, moveName } from "./story-moves";
 import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary } from "./tale-props";
 import { drawFigure } from "./heroes";
@@ -28,6 +29,8 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, size: number)
 }
 function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number) {ctx.fillStyle = "#eadbff"; ctx.font = "bold 17px Trebuchet MS"; ctx.textAlign = "center"; ctx.fillText(text, x, y);}
 export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chapter: number, time: number, complete = false) {
+  time=Math.min(7,Math.max(0,time));
+  if(complete){drawConclusion(ctx,hero,chapter,time);return;}
   const pose = talePose(hero, chapter, time, complete), p = pose.progress;
   ctx.save();
   ctx.fillStyle = hero === 0 ? "#102d30" : hero === 1 ? "#36251d" : "#211737"; ctx.fillRect(0, 0, 960, 360);
@@ -56,7 +59,13 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
       label(ctx, open > 0.4 ? "The star-key opens the gate" : "Five fragments form a key of golden light", 480, 50);
     }
   } else if (hero === 1) {
-    if (chapter < 2) {
+    if(chapter===1){
+      ctx.fillStyle="#183744";ctx.fillRect(0,65,960,245);
+      for(let i=0;i<6;i++){ctx.fillStyle=i/6<p?"#a7ecc4":"#576d7d";ctx.fillRect(430+i*65,140+(i%2)*45,38,38);}
+      ctx.strokeStyle="#98d5d1";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(390,170);ctx.lineTo(850,220);ctx.stroke();
+      figure(310);drawStoryMove(ctx,"gadget",350,240,760,180,p,1);
+      label(ctx,"Pip wires a circuit into his forgotten prototype",480,50);
+    } else if (chapter === 0) {
       ctx.fillStyle = "#795135"; ctx.fillRect(440, 255, 410, 18); ctx.fillRect(470, 270, 18, 60); ctx.fillRect(800, 270, 18, 60);
       const count = chapter === 0 ? 6 : 4;
       const beat = Math.min(count - 0.001, p * count), current = Math.floor(beat), swing = Math.sin((beat % 1) * Math.PI);
@@ -79,10 +88,14 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
       label(ctx, p < 0.7 ? "Pip shrinks and slips beneath the scanner" : "His gadgets disable the nightmare machine's locks", 480, 50);
     }
   } else {
-    drawWhimsicalLibrary(ctx, time);
+    if(chapter===0) drawWhimsicalLibrary(ctx,time);
+    else if(chapter===1){ctx.fillStyle="#252b49";ctx.fillRect(0,0,960,360);for(let i=0;i<5;i++){ctx.fillStyle="#676589";ctx.fillRect(i*220,70,25,240);}}
+    else {ctx.fillStyle="#10142d";ctx.fillRect(0,0,960,360);for(let i=0;i<35;i++){ctx.fillStyle="#dcc8ff";ctx.fillRect(100+(i*137)%780,70+(i*59)%220,3,3);}ctx.strokeStyle="#79749b";ctx.lineWidth=12;ctx.beginPath();ctx.arc(480,340,300,Math.PI,0);ctx.stroke();}
     // An arched, gilt mirror anchors the magical reading nook.
+    if(chapter<2){
     ctx.fillStyle = "#48366b"; ctx.strokeStyle = "#dfbe86"; ctx.lineWidth = 7;
     ctx.beginPath(); ctx.moveTo(600, 303); ctx.lineTo(600, 152); ctx.bezierCurveTo(600, 61, 770, 61, 770, 152); ctx.lineTo(770, 303); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
     figure();
     if (chapter === 0) {
       const bx = mix(685, pose.heroX + 70, Math.max(0, (p - 0.7) / 0.3));

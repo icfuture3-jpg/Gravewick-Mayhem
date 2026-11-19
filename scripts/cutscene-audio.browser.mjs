@@ -33,6 +33,7 @@ try {
     const before=await audit();
     await click(`Select ${hero}`);
     await page.getByRole('button',{name:'Continue story',exact:true}).waitFor();
+    await click('Continue story');
     await page.waitForFunction(()=>window.recordedClips.filter(a=>a.src).every(a=>a.readyState>=3));
     await page.clock.runFor(7500);
     await new Promise(resolve=>setTimeout(resolve,200));
@@ -46,10 +47,12 @@ try {
     console.log(`PASS ${hero}: recorded/synthesized cues, no loop, all playback stops`);
   }
   await click('Select Pip');await page.getByRole('button',{name:'Continue story',exact:true}).waitFor();
+    await click('Continue story');
   await click('Sound: on');const muted=await audit();
   await page.clock.runFor(7500);assert.deepEqual(await audit(),muted,'Muted scene creates no audio');
   await click('Back to Gravewick Tales');
   await click('Select Wisp');await page.getByRole('button',{name:'Continue story',exact:true}).waitFor();
+    await click('Continue story');
   await page.getByRole('button',{name:'Sound: off',exact:true}).waitFor();
   await click('Sound: off');await page.clock.runFor(7500);
   assert.ok((await audit()).tones>muted.tones);

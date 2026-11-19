@@ -123,3 +123,14 @@ Guide sparks HOME is a dedicated command: it ignores held movement input until G
 ## Pip's wooden toy-repair audio
 
 Pip's story mallet cues and playable mini-game swings use a bundled original 140ms wood knock, with damped inharmonic resonances and a short contact click instead of pitched beeps. A playable accepted mallet swing triggers one knock; idle drawing, cooldown-blocked input, pause and muted play do not. The mini-game shares the story's sound preference and exposes a Sound toggle. Audio closes on exit. Grimble's thunder and all other heroes' audio are unchanged.
+
+## Unique personal-story chapters
+
+Each first chapter now opens with a separate prologue tableau instead of restarting the action animation on Continue story. All nine conclusions have their own reward compositions, not another run of the task. Story staging stops at its final pose after seven seconds rather than looping while reading. The same character models and signature moves remain shared deliberately, but chapter sequences and objectives are not replayed.
+
+Nine distinct mini-games:
+- Grimble: backyard spark escort; crypt lantern lighting; numbered star-gate seals.
+- Pip: market monster-toy hammer repair (wood knocks retained); visible-shape circuit assembly on a blueprint desk; shrinking to open nearby locks inside the nightmare machine.
+- Wisp: library page rescue and returning to BOOK (glowing-book flight retained); rotating mirrors toward visible target arrows in a vaulted hall; inscribing ordered constellation stars with bolts on the observatory roof.
+
+Later Pip/Wisp chapters no longer repeat toy repair or page fetching. Instructions, control buttons, progress counters, error hints and scenery reflect the specific task. Wrong puzzle inputs do not erase completed work. Start/pause/restart/exit, ready L moves, shared mute, single-Wisp normal scenes and Grimble's thunder remain. Extra Wisp copies only appear when L is deliberately activated.

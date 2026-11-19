@@ -1,6 +1,7 @@
+import { drawPrologue } from "./story-tableaux";
 import { playHammerCues } from "./pip-hammer-audio";
 import { createSound } from "./audio";
-import { drawCutsceneEffects, playCutsceneCues } from "./cutscene-effects";
+import { playCutsceneCues } from "./cutscene-effects";
 import type { Action } from "./movie";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { startTale, advanceTale, taleScenes } from "./tales";
@@ -50,15 +51,17 @@ function TaleCutscene({scenes, hero, chapter, complete, label, nextLabel, onNext
     const ctx = canvas.current?.getContext("2d"); if (!ctx) return;
     const start = performance.now(); let raf = 0, previous = 0;
     const action: Action = complete ? "victory" : hero === 0 ? "portal" : hero === 1 ? "gadget" : "illusion";
-    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const frame = (now: number) => {
       ctx.clearRect(0, 0, 960, 360); ctx.fillStyle = "#211531"; ctx.fillRect(0, 0, 960, 360);
-      const time = (now - start) / 1000;
-      drawTaleAction(ctx, hero, chapter, time, complete);
-      drawCutsceneEffects(ctx, action, 7, time, 960, 360, reducedMotion);
+      const elapsed = (now - start) / 1000;
+      const time = Math.min(7,elapsed);
+      const prologue = !complete && chapter===0 && picked===0 && scenes.length>1;
+      if(prologue) drawPrologue(ctx,hero,time);
+      else drawTaleAction(ctx,hero,chapter,time,complete);
+      // Each scene owns its effects; no repeated generic attack montage over the story.
       if (sound.current) {
-        if (hero === 1) playHammerCues(sound.current, hero, chapter, complete, previous, time);
-        else playCutsceneCues(sound.current, action, 7, previous, time);
+        if (hero === 1 && !prologue) playHammerCues(sound.current, hero, chapter, complete, previous, time);
+        else if(hero!==1 && !prologue) playCutsceneCues(sound.current, action, 7, previous, time);
       }
       previous = time;
       raf = requestAnimationFrame(frame);
