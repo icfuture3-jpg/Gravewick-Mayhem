@@ -10,3 +10,7 @@
 
 License: https://creativecommons.org/publicdomain/zero/1.0/
 Only these individually licensed audio assets were copied, not the source projects' code.
+
+## Wood knock
+
+`wood-knock.wav`: original procedurally generated 140ms mono wooden-mallet effect for Gravewick Mayhem. Inharmonic damped body resonances with a brief contact transient; no third-party recording.

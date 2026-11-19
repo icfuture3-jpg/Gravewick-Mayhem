@@ -9,7 +9,7 @@ export interface Sound {
   music(playing: boolean): void;
   setMuted(muted: boolean): void;
   close(): void;
-  sample?(kind: "explosion" | "thunder", volume: number): void;
+  sample?(kind: "explosion" | "thunder" | "wood", volume: number): void;
 }
 
 export function createSound(): Sound {
@@ -21,7 +21,7 @@ export function createSound(): Sound {
   let closed = false;
   const recordings = new Map<string, HTMLAudioElement>();
   // Real audio files replace broadband noise for cinematic explosions and thunder.
-  for (const [kind, file] of [["explosion", "explosion.wav"], ["thunder", "thunder.ogg"]]) {
+  for (const [kind, file] of [["explosion", "explosion.wav"], ["thunder", "thunder.ogg"], ["wood", "wood-knock.wav"]]) {
     const audio = new Audio(`${import.meta.env.BASE_URL}audio/${file}`);
     audio.preload = "auto";
     recordings.set(kind!, audio);

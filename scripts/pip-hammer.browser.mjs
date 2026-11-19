@@ -5,9 +5,9 @@ try {
   const p=await browser.newPage({viewport:{width:1280,height:800}}),errors=[];
   p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{
-    window.hammerAudit={tones:0,live:0,samples:0};
+    window.hammerAudit={tones:0,live:0,samples:0,wood:0};
     const play=HTMLMediaElement.prototype.play;
-    HTMLMediaElement.prototype.play=function(){window.hammerAudit.samples++;return play.call(this);};
+    HTMLMediaElement.prototype.play=function(){if(this.src.endsWith("wood-knock.wav"))window.hammerAudit.wood++;else window.hammerAudit.samples++;return play.call(this);};
     const Native=window.AudioContext;
     window.AudioContext=class extends Native {
       constructor(...args){super(...args);window.hammerAudit.live++;}
@@ -26,10 +26,10 @@ try {
   for(let i=0;i<100&&!await p.getByLabel('Personal story cutscene').count();i++){await new Promise(r=>setTimeout(r,50));await p.clock.runFor(20);}
   await p.getByLabel('Personal story cutscene').waitFor();
   await p.clock.runFor(7500);
-  assert.equal((await audit()).tones,12,'Six two-tone hammer taps');
-  await p.clock.runFor(6000);assert.equal((await audit()).tones,12,'No endless tapping while reading');
+  assert.equal((await audit()).wood,6,'Six wooden hammer taps');
+  await p.clock.runFor(6000);assert.equal((await audit()).wood,6,'No endless tapping while reading');
   await click('Sound: on');await click('Continue story');await p.clock.runFor(7500);
-  assert.equal((await audit()).tones,12,'Muted repair scene is silent');
+  assert.equal((await audit()).wood,6,'Muted repair scene is silent');
   await click('Back to Gravewick Tales');assert.equal((await audit()).live,0,'Audio closes on exit');
   assert.equal((await audit()).samples,0,'No thunder or explosion recordings play in Pip repair scenes');
   assert.deepEqual(errors,[]);

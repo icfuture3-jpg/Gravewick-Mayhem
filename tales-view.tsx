@@ -16,7 +16,7 @@ const panel: CSSProperties = {position: "absolute", inset: 0, zIndex: 70, backgr
 export function Tales({hero, onExit, muted = false, onMuted}: {hero: HeroId; onExit: () => void; muted?: boolean; onMuted?: (muted: boolean) => void}) {
   const [tale, setTale] = useState(() => startTale(hero));
   const title = SOLO_STORIES[hero].title;
-  if (tale.phase === "game") return <MiniGame key={`${hero}-${tale.chapter}`} hero={hero} stage={tale.chapter}
+  if (tale.phase === "game") return <MiniGame key={`${hero}-${tale.chapter}`} hero={hero} stage={tale.chapter} muted={muted} onMuted={onMuted}
     onComplete={(bonus) => setTale((current) => advanceTale(current, "win", bonus))} onExit={onExit} />;
   if (tale.phase === "complete") return <div style={panel}>
     <h1 style={{margin: 0, color: "#ffd36a"}}>Gravewick Tales</h1>

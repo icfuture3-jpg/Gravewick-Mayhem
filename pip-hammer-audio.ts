@@ -11,8 +11,6 @@ export function playHammerCues(sound: Sound, hero: HeroId, chapter: number, comp
   if (hero !== 1 || complete) return;
   for (const impact of hammerImpactTimes(chapter)) {
     if (impact <= previous || impact > time) continue;
-    // Short woody knock with a higher mallet click, not a sustained buzz or explosion.
-    sound.tone(190, "sine", 0.075, 0.13, -100);
-    sound.tone(780, "triangle", 0.025, 0.045, -300);
+    sound.sample?.("wood", 0.75);
   }
 }

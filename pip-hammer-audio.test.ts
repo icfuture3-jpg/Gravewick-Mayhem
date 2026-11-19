@@ -8,23 +8,23 @@ it.each([0,1])("syncs chapter %i taps to every mallet impact exactly once",chapt
   let prev=0;
   for(const t of times){
     playHammerCues(s,1,chapter,false,prev,t-0.001);
-    const before=vi.mocked(s.tone).mock.calls.length;
+    const before=vi.mocked(s.sample!).mock.calls.length;
     playHammerCues(s,1,chapter,false,t-0.001,t);
-    expect(vi.mocked(s.tone).mock.calls.length-before).toBe(2);prev=t;
+    expect(vi.mocked(s.sample!).mock.calls.length-before).toBe(1);prev=t;
   }
-  const total=vi.mocked(s.tone).mock.calls.length;
+  const total=vi.mocked(s.sample!).mock.calls.length;
   playHammerCues(s,1,chapter,false,prev,30);
-  expect(s.tone).toHaveBeenCalledTimes(total);
-  expect(s.sample).not.toHaveBeenCalled();expect(s.noise).not.toHaveBeenCalled();
+  expect(s.sample).toHaveBeenCalledTimes(total);
+  expect(s.tone).not.toHaveBeenCalled();expect(s.noise).not.toHaveBeenCalled();
 });
 it("does not hammer during conclusions, scanner scenes or other heroes' stories",()=>{
   const s=audio();
   playHammerCues(s,1,0,true,0,10);playHammerCues(s,1,2,false,0,10);
   playHammerCues(s,0,0,false,0,10);playHammerCues(s,2,0,false,0,10);
-  expect(s.tone).not.toHaveBeenCalled();
+  expect(s.sample).not.toHaveBeenCalled();
 });
 it("a dropped frame still triggers each crossed impact once",()=>{
   const s=audio();playHammerCues(s,1,0,false,0,7);
-  expect(s.tone).toHaveBeenCalledTimes(12);
-  playHammerCues(s,1,0,false,7,14);expect(s.tone).toHaveBeenCalledTimes(12);
+  expect(s.sample).toHaveBeenCalledTimes(6);
+  playHammerCues(s,1,0,false,7,14);expect(s.sample).toHaveBeenCalledTimes(6);
 });
