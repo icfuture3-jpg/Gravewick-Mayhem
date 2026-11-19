@@ -1,108 +1,100 @@
 import { miniChapter } from "./mini-backstory";
 import type { HeroId } from "./solo-story";
 
-export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; skill?: boolean; rune?: number}
+export interface MiniInput {x: number; y: number; aimX: number; aimY: number; action?: boolean; moveTo?: boolean}
+interface Light {x: number; y: number; found: boolean; following: boolean; taken: boolean}
 export interface MiniState {
-  hero: HeroId; stage: number; time: number; elapsed: number; progress: number; goal: number;
-  status: "playing" | "won" | "lost"; px: number; py: number; cooldown: number; invuln: number;
-  gadget: number; tiny: number; show: number; index: number; sequence: number[]; message: string;
-  sparks: {x: number; y: number; found: boolean; taken: boolean}[];
-  targets: {x: number; y: number; kind: number; hit: boolean}[];
-  shots: {x: number; y: number; vx: number; vy: number; kind: number; life: number}[];
+  hero: HeroId; stage: number; elapsed: number; progress: number; goal: number;
+  status: "playing" | "won"; px: number; py: number; invuln: number; message: string;
+  destination: {x: number; y: number} | null;
+  sparks: Light[]; pages: {x: number; y: number; taken: boolean}[]; carrying: number | null;
+  part: number; swing: number; swingX: number; swingY: number;
 }
+export const HOME = {x: 480, y: 405};
+export const REPAIR_PARTS = [{x: 458, y: 225}, {x: 505, y: 255}, {x: 480, y: 290}] as const;
 export const MINI_RULES = [
-  "WASD/arrows move. Hold J or Space to shine your lantern; walk over revealed lights. K opens a portal toward your mouse (2s cooldown). Gather all 5 lights. Red shadows steal 3 seconds.",
-  "Mouse aims · J/click throws · K cycles dynamite/frost/shock. Match each target's numbered gadget. WASD/arrows move. Space shrinks for 2s to dodge the red scanner (5s cooldown). Hit all 6 targets.",
-  "Watch the glowing runes. When the lights finish, repeat the order by clicking the tiles/buttons or pressing 1–4. Complete three patterns. A wrong rune costs 3 seconds; K replays the pattern at a 5-second cost.",
+  "Click the ground or use WASD/arrows to move. Your lantern reveals nearby star sparks automatically. Walk close to a spark so it follows you, then lead it to the glowing HOME lantern. Avoid the purple shadows. Rescue all 5. No time limit.",
+  "Click the large golden broken part to hit it with Pip’s meat mallet. Repair the 3 highlighted parts in order, then fix the next monster toy. Fix all 6 toys. You can also aim with the mouse and press J or Space. No wrong-hit penalty or time limit.",
+  "Click a glowing page or use WASD/arrows to walk to it. Pick it up by walking close, then return it to the open BOOK. Carry one page at a time. Restore all 3 pages. No patterns to remember and no time limit.",
 ] as const;
-const sequence = (stage: number, round: number) => Array.from({length: 3 + round}, (_, i) => (stage + i * 3 + round * 2 + Math.floor(i / 2)) % 4);
 export function createMini(hero: HeroId, stage = 0): MiniState {
-  return {hero, stage, time: hero === 2 ? 60 : 45, elapsed: 0, progress: 0, goal: hero === 0 ? 5 : hero === 1 ? 6 : 3,
-    status: "playing", px: 480, py: 390, cooldown: 0, invuln: 0, gadget: 0, tiny: 0,
-    show: hero === 2 ? 3.2 : 0, index: 0, sequence: sequence(stage, 0), message: "",
-    sparks: [{x: 130, y: 150}, {x: 330, y: 260}, {x: 550, y: 120}, {x: 790, y: 230}, {x: 690, y: 390}].map((p) => ({...p, found: false, taken: false})),
-    targets: Array.from({length: 6}, (_, i) => ({x: 130 + i * 140, y: 105 + (i % 2) * 80, kind: (i + stage) % 3, hit: false})), shots: []};
+  return {hero, stage, elapsed: 0, progress: 0, goal: hero === 0 ? 5 : hero === 1 ? 6 : 3,
+    status: "playing", px: HOME.x, py: HOME.y, invuln: 0, destination: null, message: "",
+    sparks: [{x: 130, y: 150}, {x: 330, y: 260}, {x: 550, y: 120}, {x: 790, y: 230}, {x: 740, y: 390}].map((p) => ({...p, found: false, following: false, taken: false})),
+    pages: [{x: 185, y: 180}, {x: 735, y: 180}, {x: 770, y: 350}].map((p) => ({...p, taken: false})), carrying: null,
+    part: 0, swing: 0, swingX: REPAIR_PARTS[0].x, swingY: REPAIR_PARTS[0].y};
+}
+export function shadowPosition(index: number, time: number) {
+  return {x: 230 + index * 250, y: 220 + Math.sin(time * 0.8 + index * 2) * 85};
+}
+const distance = (a: {x: number; y: number}, b: {x: number; y: number}) => Math.hypot(a.x - b.x, a.y - b.y);
+export function miniObjective(s: MiniState): string {
+  if (s.status === "won") return "All restored! Choose Continue tale to see what happens next.";
+  if (s.hero === 1) return `Toy ${s.progress + 1}/6 · Hit golden part ${s.part + 1}/3`;
+  if (s.hero === 2) return s.carrying === null ? "Find a glowing page — walk to it to pick it up" : "Page collected! Return to the glowing BOOK";
+  const following = s.sparks.filter((spark) => spark.following && !spark.taken).length;
+  return following ? `${following} ${following === 1 ? "spark is" : "sparks are"} following — guide them to HOME` : "Find star sparks — your lantern lights the way";
 }
 export function stepMini(s: MiniState, input: MiniInput, dt: number) {
   if (s.status !== "playing") return;
   dt = Math.max(0, Math.min(0.05, dt));
-  s.time -= dt; s.elapsed += dt; s.cooldown = Math.max(0, s.cooldown - dt); s.invuln = Math.max(0, s.invuln - dt); s.tiny = Math.max(0, s.tiny - dt);
-  const len = Math.hypot(input.x, input.y);
-  if (s.hero !== 2 && len > 0) {
-    s.px = Math.max(24, Math.min(936, s.px + input.x / len * 250 * dt));
-    s.py = Math.max(80, Math.min(450, s.py + input.y / len * 250 * dt));
-  }
-  if (s.hero === 0) {
-    if (input.skill && s.cooldown === 0) {
-      const dx = input.aimX - s.px, dy = input.aimY - s.py, d = Math.hypot(dx, dy);
-      if (d > 0) {s.px += dx / d * Math.min(240, d); s.py += dy / d * Math.min(240, d);}
-      s.px = Math.max(24, Math.min(936, s.px)); s.py = Math.max(80, Math.min(450, s.py)); s.cooldown = 2;
+  s.elapsed += dt; s.invuln = Math.max(0, s.invuln - dt); s.swing = Math.max(0, s.swing - dt);
+  const remember = () => {s.progress++; s.message = miniChapter(s.hero, s.stage).memories[s.progress - 1]!;};
+  if (s.hero === 1) {
+    if (input.action && s.swing === 0) {
+      s.swing = 0.28; s.swingX = input.aimX; s.swingY = input.aimY;
+      if (distance({x: input.aimX, y: input.aimY}, REPAIR_PARTS[s.part]!) <= 25) {
+        s.part++;
+        if (s.part === REPAIR_PARTS.length) {s.part = 0; remember();}
+      } else s.message = "Aim for the large GOLD ring — no penalty. Try again!";
     }
-    for (const spark of s.sparks) {
-      const d = Math.hypot(s.px - spark.x, s.py - spark.y);
-      if (input.action && d < 120) spark.found = true;
-      if (spark.found && !spark.taken && d < 30) {spark.taken = true; s.progress++; s.message = miniChapter(s.hero, s.stage).memories[s.progress - 1]!;}
-    }
-    for (let i = 0; i < 3; i++) {
-      const x = 180 + i * 270, y = 240 + Math.sin(s.elapsed * 1.5 + i * 2) * 120;
-      if (s.invuln === 0 && Math.hypot(s.px - x, s.py - y) < 38) {s.time -= 3; s.invuln = 2; s.message = "A shadow stole 3 seconds!";}
-    }
-  } else if (s.hero === 1) {
-    if (input.skill) s.gadget = (s.gadget + 1) % 3;
-    if (input.rune === 4 && s.cooldown === 0) {s.tiny = 2; s.cooldown = 5;}
-    if (input.action && s.shots.length < 3) {
-      const a = Math.atan2(input.aimY - s.py, input.aimX - s.px);
-      s.shots.push({x: s.px, y: s.py, vx: Math.cos(a) * 550, vy: Math.sin(a) * 550, kind: s.gadget, life: 2});
-    }
-    for (const shot of s.shots) {
-      shot.x += shot.vx * dt; shot.y += shot.vy * dt; shot.life -= dt;
-      if (shot.x < 10 || shot.x > 950) {shot.vx *= -1; shot.x = Math.max(10, Math.min(950, shot.x));}
-      if (shot.y < 70 || shot.y > 460) {shot.vy *= -1; shot.y = Math.max(70, Math.min(460, shot.y));}
-      const target = s.targets.find((t) => !t.hit && Math.hypot(t.x - shot.x, t.y - shot.y) < 30);
-      if (target && shot.life > 0) {
-        shot.life = 0;
-        if (target.kind === shot.kind) {target.hit = true; s.progress++; s.message = miniChapter(s.hero, s.stage).memories[s.progress - 1]!;}
-        else {s.time -= 2; s.message = "Wrong gadget! Match the target number. −2s";}
-      }
-    }
-    s.shots = s.shots.filter((shot) => shot.life > 0);
-    const scanner = 90 + (s.elapsed * 65) % 780;
-    if (Math.abs(s.px - scanner) < 20 && s.tiny === 0 && s.invuln === 0) {s.time -= 3; s.invuln = 2; s.message = "Scanner spotted Pip! Shrink with Space. −3s";}
   } else {
-    const showing = s.show > 0;
-    s.show = Math.max(0, s.show - dt);
-    if (input.skill && s.show === 0) {s.time -= 5; s.index = 0; s.show = s.sequence.length * 0.8 + 0.8; s.message = "Watch the mirrors again. −5s";}
-    else if (input.rune !== undefined && !showing) {
-      if (input.rune === s.sequence[s.index]) {
-        s.index++; s.message = `Correct rune ${s.index}/${s.sequence.length}`;
-        if (s.index === s.sequence.length) {
-          s.progress++; s.index = 0;
-          s.message = miniChapter(s.hero, s.stage).memories[s.progress - 1]!;
-          if (s.progress < s.goal) {s.sequence = sequence(s.stage, s.progress); s.show = s.sequence.length * 0.8 + 0.8;}
+    if (input.moveTo) s.destination = {x: Math.max(35, Math.min(925, input.aimX)), y: Math.max(105, Math.min(445, input.aimY))};
+    let dx = input.x, dy = input.y;
+    if (dx || dy) s.destination = null;
+    else if (s.destination) {
+      dx = s.destination.x - s.px; dy = s.destination.y - s.py;
+      if (Math.hypot(dx, dy) < 5) {s.px = s.destination.x; s.py = s.destination.y; s.destination = null; dx = 0; dy = 0;}
+    }
+    const len = Math.hypot(dx, dy), speed = s.invuln > 0 ? 150 : 220;
+    if (len > 0) {
+      const step = Math.min(speed * dt, s.destination ? len : speed * dt);
+      s.px = Math.max(35, Math.min(925, s.px + dx / len * step));
+      s.py = Math.max(105, Math.min(445, s.py + dy / len * step));
+    }
+    const player = {x: s.px, y: s.py};
+    if (s.hero === 0) {
+      for (const spark of s.sparks) {
+        if (spark.taken) continue;
+        const d = distance(player, spark);
+        if (d < 130) spark.found = true;
+        if (spark.found && d < 40) spark.following = true;
+        if (spark.following) {
+          if (distance(player, HOME) < 60) {
+            spark.taken = true; spark.following = false; remember();
+          } else if (d > 25) {
+            const step = Math.min(d - 25, 250 * dt);
+            spark.x += (s.px - spark.x) / d * step; spark.y += (s.py - spark.y) / d * step;
+          }
         }
-      } else {s.index = 0; s.time -= 3; s.message = "That was an illusion. Start the pattern again. −3s";}
+      }
+      for (let i = 0; i < 3; i++) if (s.invuln === 0 && distance(player, shadowPosition(i, s.elapsed)) < 35) {
+        s.invuln = 1.5; s.message = "A shadow slows your steps — your rescued lights are safe. Keep heading HOME!";
+      }
+    } else {
+      if (s.carrying === null) {
+        const page = s.pages.findIndex((p) => !p.taken && distance(player, p) < 35);
+        if (page !== -1) {s.pages[page]!.taken = true; s.carrying = page; s.message = "A lost page! Bring it to the open BOOK at the bottom.";}
+      } else if (distance(player, HOME) < 55) {s.carrying = null; remember();}
     }
   }
-  if (s.progress >= s.goal) s.status = "won";
-  else if (s.time <= 0) {s.time = 0; s.status = "lost";}
+  if (s.progress >= s.goal) {s.status = "won"; s.destination = null;}
 }
-export const miniBonus = (s: MiniState) => s.status === "won" ? 500 + Math.ceil(s.time) * 10 : 0;
+export const miniBonus = (s: MiniState) => s.status === "won" ? 500 + s.goal * 100 : 0;
 
 /** Coordinates inside an object-fit:contain canvas, excluding its letterbox padding. */
 export function miniPoint(rect: {left: number; top: number; width: number; height: number}, clientX: number, clientY: number) {
   const scale = Math.min(rect.width / 960, rect.height / 480);
   return {x: Math.max(0, Math.min(960, (clientX - rect.left - (rect.width - 960 * scale) / 2) / scale)),
     y: Math.max(0, Math.min(480, (clientY - rect.top - (rect.height - 480 * scale) / 2) / scale))};
-}
-
-export function runeAt(x: number, y: number): number | undefined {
-  if (y < 100 || y > 230) return undefined;
-  const i = Math.floor((x - 170) / 170);
-  return i >= 0 && i < 4 && x <= 170 + i * 170 + 140 ? i : undefined;
-}
-export function showingRune(s: MiniState): number | undefined {
-  if (s.show <= 0) return undefined;
-  const elapsed = Math.max(0, s.sequence.length * 0.8 + 0.8 - s.show);
-  // Blank the final 0.2s of each beat so repeated identical runes are distinguishable.
-  return elapsed % 0.8 < 0.6 ? s.sequence[Math.floor(elapsed / 0.8)] : undefined;
 }
