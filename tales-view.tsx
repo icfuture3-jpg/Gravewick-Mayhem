@@ -1,3 +1,4 @@
+import { playHammerCues } from "./pip-hammer-audio";
 import { createSound } from "./audio";
 import { drawCutsceneEffects, playCutsceneCues } from "./cutscene-effects";
 import type { Action } from "./movie";
@@ -55,7 +56,10 @@ function TaleCutscene({scenes, hero, chapter, complete, label, nextLabel, onNext
       const time = (now - start) / 1000;
       drawTaleAction(ctx, hero, chapter, time, complete);
       drawCutsceneEffects(ctx, action, 7, time, 960, 360, reducedMotion);
-      if (sound.current) playCutsceneCues(sound.current, action, 7, previous, time);
+      if (sound.current) {
+        if (hero === 1) playHammerCues(sound.current, hero, chapter, complete, previous, time);
+        else playCutsceneCues(sound.current, action, 7, previous, time);
+      }
       previous = time;
       raf = requestAnimationFrame(frame);
     }; raf = requestAnimationFrame(frame); return () => cancelAnimationFrame(raf);
