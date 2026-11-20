@@ -1,3 +1,4 @@
+import {drawEnvironment,chapterEnvironment} from "./environments";
 import {drawFigure} from "./heroes";
 import {drawMonsterToy,drawWhimsicalLibrary,drawWorkshopTable,drawWorkshop} from "./tale-props";
 import type {HeroId} from "./solo-story";
@@ -11,14 +12,7 @@ export function watchPose(time:number) {
 }
 function drawNightWatch(ctx:CanvasRenderingContext2D,time:number) {
  const pose=watchPose(time),t=Math.min(7,time);
- ctx.fillStyle="#101e31";ctx.fillRect(0,0,960,360);
- ctx.fillStyle="#c5d4d9";ctx.beginPath();ctx.arc(100,70,24,0,Math.PI*2);ctx.fill();
- for(let i=0;i<7;i++){
-  const x=10+i*140;ctx.fillStyle=i%2?"#344151":"#29384b";ctx.fillRect(x,160,110,140);
-  ctx.fillStyle="#1b283c";ctx.beginPath();ctx.moveTo(x-8,160);ctx.lineTo(x+55,115);ctx.lineTo(x+118,160);ctx.closePath();ctx.fill();
-  ctx.fillStyle="#132137";ctx.fillRect(x+18,190,22,30);ctx.fillRect(x+70,190,22,30);
-  ctx.fillStyle="#8994ae";ctx.font="14px Trebuchet MS";ctx.fillText("z Z",x+50,108);
- }
+ drawEnvironment(ctx,"town");
  if(pose.seesStar){
   ctx.fillStyle=`rgba(255,225,141,${pose.glow*0.28})`;ctx.beginPath();ctx.arc(735,160,150,0,Math.PI*2);ctx.fill();
   ctx.fillStyle=`rgba(255,244,193,${pose.glow*0.5})`;ctx.beginPath();ctx.arc(735,160,75,0,Math.PI*2);ctx.fill();
@@ -52,6 +46,7 @@ export function drawPrologue(ctx:CanvasRenderingContext2D,hero:HeroId,time:numbe
 /** Each reward is a new composition; finished tasks are never re-enacted. */
 export function drawConclusion(ctx:CanvasRenderingContext2D,hero:HeroId,chapter:number,time:number){
  const p=Math.min(1,time/4);ctx.fillStyle=[['#153e40','#27213c','#213950'],['#49352c','#15373c','#263846'],['#302348','#414268','#11132d']][hero]![chapter]!;ctx.fillRect(0,0,960,360);
+ drawEnvironment(ctx,chapterEnvironment(hero,chapter));
  caption(ctx,TITLES[hero][chapter]!);
  if(hero===0){
   if(chapter===0){ctx.fillStyle="#ffd675";for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(480+Math.cos(i*1.25)*65,180+Math.sin(i*1.25)*55,9,0,Math.PI*2);ctx.fill();}}

@@ -1,3 +1,4 @@
+import {drawEnvironment,chapterEnvironment} from "./environments";
 import { drawConclusion } from "./story-tableaux";
 import { drawStoryMove, storyMove, moveName } from "./story-moves";
 import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary, drawWorkshopTable, drawWorkshop } from "./tale-props";
@@ -44,7 +45,7 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
   const pose = talePose(hero, chapter, time, complete), p = pose.progress;
   ctx.save();
   ctx.fillStyle = hero === 0 ? "#102d30" : hero === 1 ? "#36251d" : "#211737"; ctx.fillRect(0, 0, 960, 360);
-  ctx.fillStyle = "#080911"; ctx.fillRect(0, 310, 960, 50);
+  drawEnvironment(ctx,chapterEnvironment(hero,chapter));
   const libraryApproach = hero === 2 && chapter === 0;
   const figure = (x = pose.heroX, alpha = 1, scale = pose.scale) => {ctx.save(); ctx.globalAlpha = alpha * (hero === 2 && chapter === 1 && time < 5 && !complete ? 0.18 : 1); drawFigure(ctx, hero, x, pose.heroY, scale, 0, false, false, time, {speed: p < (libraryApproach ? 0.7 : 0.65) && !complete ? (libraryApproach ? 55 : 100) : 0, phase: time * (libraryApproach ? 0.65 : 1.4), side: libraryApproach}); ctx.restore();};
   if (hero === 0) {
@@ -73,7 +74,7 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
     }
   } else if (hero === 1) {
     if(chapter===1){
-      ctx.fillStyle="#183744";ctx.fillRect(0,65,960,245);
+
       for(let i=0;i<6;i++){ctx.fillStyle=i/6<p?"#a7ecc4":"#576d7d";ctx.fillRect(430+i*65,140+(i%2)*45,38,38);}
       ctx.strokeStyle="#98d5d1";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(390,170);ctx.lineTo(850,220);ctx.stroke();
       figure(310);drawStoryMove(ctx,"gadget",350,240,760,180,p,1);
@@ -97,8 +98,6 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
     }
   } else {
     if(chapter===0) drawWhimsicalLibrary(ctx,time);
-    else if(chapter===1){ctx.fillStyle="#252b49";ctx.fillRect(0,0,960,360);for(let i=0;i<5;i++){ctx.fillStyle="#676589";ctx.fillRect(i*220,70,25,240);}}
-    else {ctx.fillStyle="#10142d";ctx.fillRect(0,0,960,360);for(let i=0;i<35;i++){ctx.fillStyle="#dcc8ff";ctx.fillRect(100+(i*137)%780,70+(i*59)%220,3,3);}ctx.strokeStyle="#79749b";ctx.lineWidth=12;ctx.beginPath();ctx.arc(480,340,300,Math.PI,0);ctx.stroke();}
     // An arched, gilt mirror anchors the magical reading nook.
     if(chapter<2){
     ctx.fillStyle = "#48366b"; ctx.strokeStyle = "#dfbe86"; ctx.lineWidth = 7;

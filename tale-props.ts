@@ -1,3 +1,4 @@
+import {drawEnvironment} from "./environments";
 import { workshopTable } from "./sprites";
 import { drawEnemy, type EnemyKind } from "./art";
 
@@ -40,6 +41,7 @@ export function drawMeatMallet(ctx: CanvasRenderingContext2D, handX: number, han
 
 /** Crooked bookcases, jewel-coloured books, floating candles and a moonlit window. */
 export function drawWhimsicalLibrary(ctx: CanvasRenderingContext2D, time: number) {
+  if(drawEnvironment(ctx,"library"))return;
   ctx.fillStyle = "#211934"; ctx.fillRect(0, 0, 960, 360);
   ctx.fillStyle = "#42304e"; ctx.fillRect(0, 300, 960, 60);
   ctx.strokeStyle = "#796078"; ctx.lineWidth = 1;
@@ -86,6 +88,7 @@ export function drawWorkshopTable(ctx: CanvasRenderingContext2D, x: number, y: n
 
 /** Shelves, pegboard tools, spare parts, drawers and a window make the room a workshop. */
 export function drawWorkshop(ctx: CanvasRenderingContext2D) {
+  if(drawEnvironment(ctx,"workshop"))return;
   ctx.fillStyle="#302633";ctx.fillRect(0,0,960,360);
   ctx.fillStyle="#604635";ctx.fillRect(0,290,960,70);
   ctx.strokeStyle="#846047";ctx.lineWidth=2;

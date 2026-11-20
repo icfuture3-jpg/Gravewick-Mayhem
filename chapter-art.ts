@@ -1,3 +1,4 @@
+import {drawEnvironment,chapterEnvironment} from "./environments";
 import {drawFigure} from "./heroes";
 import {CIRCUIT,MIRROR_ANGLES,MIRRORS,MACHINE_LOCKS,SKY_STARS} from "./chapter-challenges";
 import type {MiniState} from "./mini-game";
@@ -8,7 +9,7 @@ function line(ctx:CanvasRenderingContext2D,x:number,y:number,tx:number,ty:number
 /** These are distinct spaces, not palette swaps of one playfield. */
 export function drawChapterChallenge(ctx:CanvasRenderingContext2D,s:MiniState):boolean {
  if(s.stage===0 || s.hero===0)return false;
- ctx.fillStyle=s.hero===1?"#152b30":"#111126";ctx.fillRect(0,0,960,480);
+ drawEnvironment(ctx,chapterEnvironment(s.hero,s.stage),960,480);
  if(s.hero===1 && s.stage===1) {
   // A blueprint desk and six-socket circuit with a growing powered route.
   ctx.fillStyle="#214b60";ctx.fillRect(100,85,760,215);
@@ -35,7 +36,7 @@ export function drawChapterChallenge(ctx:CanvasRenderingContext2D,s:MiniState):b
   label(ctx,s.tiny>0?"TINY SERVICE PASSAGE":"L → SHRINK TO OPEN LOCKS",480,455);
  } else if(s.stage===1) {
   // A vaulted reflection hall, no library shelves or page pickups.
-  for(let i=0;i<7;i++){ctx.fillStyle="#382d59";ctx.fillRect(i*155,75,30,340);ctx.strokeStyle="#8e83ad";ctx.lineWidth=4;ctx.beginPath();ctx.arc(80+i*155,100,75,Math.PI,0);ctx.stroke();}
+
   MIRRORS.forEach((p,i)=>{
    ctx.save();ctx.translate(p.x,p.y);ctx.fillStyle=s.aligned[i]?"#8fe3db":"#41527b";ctx.strokeStyle="#d8c0f3";ctx.lineWidth=5;
    ctx.beginPath();ctx.ellipse(0,0,50,75,0,0,TAU);ctx.fill();ctx.stroke();
@@ -47,8 +48,6 @@ export function drawChapterChallenge(ctx:CanvasRenderingContext2D,s:MiniState):b
   drawFigure(ctx,2,100,365,0.48,0,false,false,s.elapsed);
  } else {
   // An observatory roof and open final page beneath the constellation.
-  ctx.fillStyle="#312c50";ctx.beginPath();ctx.arc(480,340,340,Math.PI,0);ctx.strokeStyle="#746c9d";ctx.lineWidth=12;ctx.stroke();
-  for(let i=0;i<42;i++){ctx.fillStyle="#bcb8eb";ctx.beginPath();ctx.arc(50+(i*97)%860,80+(i*47)%250,1.5,0,TAU);ctx.fill();}
   let previous={x:480,y:405};
   SKY_STARS.forEach((p,i)=>{
    if(i<s.progress)line(ctx,previous.x,previous.y,p.x,p.y,"#fbc6ff",5);

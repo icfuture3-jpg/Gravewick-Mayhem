@@ -1,3 +1,4 @@
+import {ENVIRONMENTS,environmentFrames,makeEnvironment,disposeEnvironment} from "./environments";
 // Pre-renders the 3D hero models into 2D sprite frames so the canvas game draws the same
 // characters as the "Meet the heroes" screen.
 import { makeWorkshopTable } from "./workshop-table";
@@ -131,6 +132,22 @@ async function bakeSprites(): Promise<void> {
   };
 
   try {
+    // Reuse the characters' light rig and renderer; dispose each set after its one-time bake.
+    renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    key.castShadow=true;key.shadow.mapSize.set(1024,1024);
+    Object.assign(key.shadow.camera,{left:-12,right:12,top:10,bottom:-10,near:0.1,far:40});
+    key.shadow.camera.updateProjectionMatrix();key.shadow.bias=-0.001;
+    const environmentCamera=new THREE.OrthographicCamera(-10,10,5.625,-5.625,0.1,70);
+    environmentCamera.position.set(0,10,15);environmentCamera.lookAt(0,0,-0.5);
+    for(const kind of ENVIRONMENTS){
+      const set=makeEnvironment(kind);scene.add(set);scene.background=new THREE.Color(set.userData.background);
+      renderer.setSize(1280,720,false);renderer.render(scene,environmentCamera);
+      const frame=document.createElement("canvas");frame.width=1280;frame.height=720;
+      frame.getContext("2d")!.drawImage(renderer.domElement,0,0);environmentFrames[kind]=frame;
+      scene.remove(set);disposeEnvironment(set);
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    scene.background=null;key.castShadow=false;renderer.shadowMap.enabled=false;
     const table = makeWorkshopTable(); scene.add(table);
     renderer.setSize(960,360,false);
     const camera = new THREE.OrthographicCamera(-3.7,3.7,2.3,-2.3,0.1,100);
