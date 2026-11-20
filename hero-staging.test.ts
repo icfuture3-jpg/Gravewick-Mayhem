@@ -19,6 +19,6 @@ it("Pip's prologue draws one profile character and the fixed toys visibly cheer"
  const ctx=context();vi.mocked(drawFigure).mockClear();drawPrologue(ctx,1,2);
  expect(drawFigure).toHaveBeenCalledTimes(1);expect(vi.mocked(drawFigure).mock.calls[0]![9]).toMatchObject({side:true});
  const fillText=vi.fn();const cheering=new Proxy({fillText},{get:(obj,key)=>Reflect.get(obj,key)??vi.fn()}) as unknown as CanvasRenderingContext2D;
- drawMonsterToy(cheering,0,100,200,true,1);expect(fillText).toHaveBeenCalledWith("HOORAY!",0,-82);
- drawConclusion(cheering,1,0,2);expect(fillText).toHaveBeenCalledWith("The toys cheer for Pip!",480,45);
+ drawMonsterToy(cheering,0,100,200,true,1);expect(fillText).not.toHaveBeenCalled();
+ drawConclusion(cheering,1,0,2);expect(fillText).toHaveBeenCalledWith("The workshop is restored!",480,45);
 });

@@ -55,29 +55,55 @@ export function makeEnvironment(kind:Environment) {
     }
     for(const x of [-6,6]){post(x,-2,0x565262);lantern(x,2.75,-2);}
     orb(0.65,0xc7d8dc,-6,5,-7,"moon",true);
-  } else if(kind==="workshop" || kind==="library"){
-    const library=kind==="library";
+  } else if(kind==="workshop"){
+    // Deliberately asymmetric garage: no bookcase wall, moon window or library rug.
+    for(let i=0;i<10;i++)box(1.75,0.16,0.5,0x926346,-8.2+i*1.8,3.9,-5,"roof-beam");
+    box(8,2.5,0.22,0x997447,-2.5,2.5,-5.1,"tool-pegboard");
+    for(let i=0;i<18;i++){
+      const x=-6.1+(i%9)*0.83,y=1.95+Math.floor(i/9)*1.05;
+      box(0.1,0.6,0.15,0xb2c0bf,x,y,-4.85,"tool-shaft");
+      if(i%3===0){box(0.5,0.18,0.2,0x9baca9,x,y+0.34,-4.8,"hammer-head");}
+      else if(i%3===1){mesh(new THREE.TorusGeometry(0.15,0.055,8,16,Math.PI*1.4),0xa9b5b5,x,y+0.33,-4.8,"wrench-jaw");}
+      else box(0.2,0.3,0.2,0xb76b43,x,y-0.3,-4.8,"screwdriver-grip");
+    }
+    // Two large toothed hand saws hanging beside a wall-mounted circular blade.
+    for(const [index,x] of [3.5,5.8].entries()){
+      const saw=box(1.7,0.5,0.12,0xb2c0bf,x,2.75-index*0.65,-4.8,"handsaw-blade");saw.rotation.z=-0.15;
+      box(0.45,0.7,0.18,0xb16f3c,x-1,2.8-index*0.65,-4.75,"saw-handle");
+      for(let tooth=0;tooth<10;tooth++){
+        const t=mesh(new THREE.ConeGeometry(0.085,0.2,3),0xb2c0bf,x-0.75+tooth*0.16,2.4-index*0.65,-4.78,"saw-tooth");t.rotation.z=Math.PI;
+      }
+    }
+    const blade=mesh(new THREE.CylinderGeometry(0.75,0.75,0.1,32),0xb2c0bf,7.5,2.9,-4.8,"circular-saw");blade.rotation.x=Math.PI/2;
+    for(let i=0;i<20;i++){const angle=i*Math.PI/10;const tooth=box(0.17,0.17,0.12,0xb2c0bf,7.5+Math.cos(angle)*0.76,2.9+Math.sin(angle)*0.76,-4.8,"circular-saw-tooth");tooth.rotation.z=angle;}
+    orb(0.14,0x6c7b7e,7.5,2.9,-4.67,"blade-hub");
+    // Back repair bench, vice, drill press, red drawers and salvaged clockwork.
+    box(14,0.22,1.5,0x9d754b,0,1.2,-3.9,"repair-bench");
+    for(const x of [-6,0,6]){box(1.7,1.1,1.2,0x955c48,x,0.55,-3.9,"repair-drawers");for(let row=0;row<3;row++)box(0.65,0.06,0.1,0xc2b693,x,0.2+row*0.32,-3.22,"drawer-pull");}
+    box(0.8,0.3,0.55,0x647d7c,-3,1.5,-3.6,"bench-vice");box(0.12,0.65,0.15,0xadbab7,-2.6,1.55,-3.3,"vice-screw");
+    box(0.9,0.2,0.75,0x6b827c,4,1.4,-3.5,"drill-base");box(0.18,1.3,0.18,0xacb7b3,4.2,2,-3.7,"drill-column");box(0.8,0.45,0.5,0x7b9a83,4,2.6,-3.5,"drill-motor");box(0.05,0.6,0.05,0xb7c5c1,3.8,2.15,-3.2,"drill-bit");
+    for(const x of [-7.7,7.8]){
+      box(1.1,1.2,1,0x6f7761,x,0.6,-0.5,"scrap-crate");
+      for(let i=0;i<3;i++)mesh(new THREE.TorusGeometry(0.3,0.1,6,12),0xb79b69,x+(i-1)*0.25,1.25+(i%2)*0.2,-0.5,"spare-gear");
+    }
+    box(0.4,0.18,1.2,0xd5b16b,-1,3.6,-3.9,"task-lamp");
+    lantern(-6,3.6,-3.8);lantern(2,3.6,-3.8);
+  } else if(kind==="library"){
     for(const x of [-7,-4,4,7]){
       box(2.3,3.5,0.65,0x594038,x,1.75,-4.9,"shelf-back");
       for(let level=0;level<4;level++){
         const y=0.25+level*0.8;box(2.5,0.16,0.95,0x9e754e,x,y,-4.6,"wood-shelf");
         for(let i=0;i<6;i++){
           const colors=[0x9c759f,0x6a9c94,0xb6985d,0xb4786a,0x7277a1,0x9aa75b];
-          const item=box(library?0.24:0.3,library?0.48+(i%3)*0.09:0.35,0.35,colors[i]!,x-0.9+i*0.35,y+0.34,-4.35,library?"book":"parts-bin");
-          if(library)item.rotation.z=(i%3-1)*0.06;
+          const item=box(0.24,0.48+(i%3)*0.09,0.35,colors[i]!,x-0.9+i*0.35,y+0.34,-4.35,"book");
+          item.rotation.z=(i%3-1)*0.06;
         }
       }
     }
-    if(library){
+    {
       box(2.2,2.6,0.25,0xc4a674,0,2.7,-5.2,"window-frame");
       box(1.8,2.2,0.28,0x464875,0,2.7,-5,"window-glass");orb(0.42,0xf5d9a4,0.2,3,-4.8,"window-moon",true);
       const rug=mesh(new THREE.CylinderGeometry(3,3,0.025,48),0x77618e,0,0.035,0,"reading-rug");rug.scale.z=0.6;
-    }else{
-      box(3.5,1.9,0.18,0xa17b50,0,2.2,-5.1,"tool-pegboard");
-      for(let i=0;i<7;i++){
-        const x=-1.3+i*0.44;box(0.09,0.85,0.12,0xc6bca2,x,2.2,-4.9,"tool-shaft");box(0.3,0.18,0.15,0x78927c,x,2.65,-4.87,"tool-head");
-      }
-      for(const x of [-7.6,7.6]){box(1.4,0.9,0.9,0x9c724a,x,0.45,-2,"drawer-cabinet");for(let y=0.2;y<0.9;y+=0.3)box(0.4,0.05,0.1,0xcfb276,x,y,-1.5,"drawer-pull");}
     }
     lantern(-2.4,3.6,-4);lantern(2.4,3.6,-4);
   } else if(kind==="crypt" || kind==="mirrors"){

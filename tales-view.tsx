@@ -1,5 +1,5 @@
 import { drawPrologue } from "./story-tableaux";
-import { playHammerCues } from "./pip-hammer-audio";
+import { playHammerCues, playToyStoryCheers } from "./pip-hammer-audio";
 import { createSound } from "./audio";
 import { playCutsceneCues } from "./cutscene-effects";
 import type { Action } from "./movie";
@@ -60,7 +60,7 @@ function TaleCutscene({scenes, hero, chapter, complete, label, nextLabel, onNext
       else drawTaleAction(ctx,hero,chapter,time,complete);
       // Each scene owns its effects; no repeated generic attack montage over the story.
       if (sound.current) {
-        if (hero === 1 && !prologue) playHammerCues(sound.current, hero, chapter, complete, previous, time);
+        if (hero === 1 && !prologue) {playHammerCues(sound.current, hero, chapter, complete, previous, time);playToyStoryCheers(sound.current,hero,chapter,complete,previous,time);}
         else if(hero!==1 && !prologue) playCutsceneCues(sound.current, action, 7, previous, time);
       }
       previous = time;

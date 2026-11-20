@@ -23,3 +23,13 @@ it("draws cached images at the requested aspect without allocating another set o
  expect([0,1,2].map(stage=>chapterEnvironment(0,stage))).toEqual(["town","crypt","citadel"]);
  expect([0,1,2].map(stage=>chapterEnvironment(2,stage))).toEqual(["library","mirrors","observatory"]);
 });
+
+it("the workshop is a separate repair-garage layout, not the library with different shelf contents",()=>{
+ const workshop=makeEnvironment("workshop"),library=makeEnvironment("library");
+ const names=(root:THREE.Object3D)=>{const result:string[]=[];root.traverse(item=>result.push(item.name));return result;};
+ const w=names(workshop),l=names(library);
+ for(const name of ["handsaw-blade","saw-tooth","circular-saw","drill-motor","bench-vice","repair-bench","roof-beam","spare-gear"])expect(w).toContain(name);
+ expect(w.filter(name=>name==="tool-shaft")).toHaveLength(18);
+ for(const name of ["book","shelf-back","reading-rug","window-moon"]){expect(w).not.toContain(name);expect(l).toContain(name);}
+ expect(l).not.toContain("handsaw-blade");disposeEnvironment(workshop);disposeEnvironment(library);
+});

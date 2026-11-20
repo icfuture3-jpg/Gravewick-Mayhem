@@ -17,3 +17,11 @@ it("pivots the mallet at the same hand position through wind-up and impact", () 
   expect(translate.mock.calls).toEqual([[490, 220], [490, 220]]);
   expect(rotate.mock.calls[0]).not.toEqual(rotate.mock.calls[1]);
 });
+
+it("fixed toy podiums have no wheel circles or words above the models",()=>{
+ const arc=vi.fn(),fillText=vi.fn();const context=new Proxy({arc,fillText},{get:(obj,key)=>Reflect.get(obj,key)??vi.fn()}) as unknown as CanvasRenderingContext2D;
+ drawMonsterToy(context,1,500,245,true,1);
+ expect(fillText).not.toHaveBeenCalled();
+ expect(arc.mock.calls.some(call=>call[2]===7)).toBe(false);
+ expect(arc.mock.calls.filter(call=>call[2]===3)).toHaveLength(1); // Single repair glint, not two wheel hubs.
+});
