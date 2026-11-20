@@ -138,3 +138,13 @@ Each personal memory opens with a separate prologue tableau, followed by its act
 - **Brain Meteor:** citadel skyline, mental impact beams and slime pods; leave the red warning circles and manage pods. At half health paired marked impacts arrive together, with a longer interval between pairs for escape time.
 
 Each boss has its own entrance, turn and defeat composition and dialogue, using the actual monster model. These cutscenes pause combat and remain skippable. The signature mechanics and half-health phases apply whenever the boss fights in campaign or Endless; Endless still has no cinematic interruptions. Grimoire entries describe the phase changes.
+
+## Matching 3D environments
+
+The sleeping town, workshop, library, crypt, citadel, machine room, mirror hall and observatory now use actual procedural 3D sets. Rounded geometry, shaded wood/stone/metal, book-filled shelves, tools, rooftops, archways, moonlit windows and lanterns replace the flat backdrop layers. The same Three.js renderer, hemisphere/key/rim lights and Standard materials used to bake the characters render these environments, with cast/received shadows during the scenery bake.
+
+Eight 1280×720 images are baked once during the existing loading screen and reused in personal stories, all nine objective layouts, campaign/Endless arenas and boss scenes. Geometry/materials are disposed after each scenery bake; the images consume about 28 MiB uncompressed. No extra renderer or WebGL work runs per gameplay frame. Initial loading does extra scenery work; mobile loading performance has not been measured. No external assets, textures or dependencies were added.
+
+This changes backdrop art, not the simulation: collision bounds, hit areas, repair parts, numbered shard positions, timing, bosses, controls, scores and Wisp's collection-only personal activity remain unchanged. Interactive puzzle instruments, outlines, labels, magical effects and foreground story props remain drawn overlays for clarity; this is not a free-moving 3D camera conversion.
+
+With the local development server running, `bun scripts/environments.browser.mjs` checks all eight baked images and renders all nine objective layouts; `bun run test:browser` checks the real personal-game flows. The isolated gallery is not a full campaign playthrough.

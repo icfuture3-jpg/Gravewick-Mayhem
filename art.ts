@@ -1,3 +1,4 @@
+import {drawEnvironment} from "./environments";
 // Cartoon canvas drawing: arenas, heroes, and monsters with chunky outlines.
 
 import { CAMPAIGN_LOCATIONS } from "./locations";
@@ -80,6 +81,7 @@ export function drawBackground(
   decor: Decor[],
   time: number,
 ) {
+  if(drawEnvironment(ctx,stage===0?"town":stage===1?"crypt":"citadel",W,H))return;
   const [a, b] = FLOORS[stage] ?? FLOORS[0] ?? ["#222", "#111"];
   const grad = ctx.createRadialGradient(W / 2, H / 2, 60, W / 2, H / 2, W * 0.7);
   grad.addColorStop(0, a);

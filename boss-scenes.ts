@@ -1,3 +1,4 @@
+import {drawEnvironment} from "./environments";
 import {drawEnemy} from "./art";
 import {drawFigure} from "./heroes";
 import {BOSS_DESIGNS} from "./boss-design";
@@ -6,21 +7,21 @@ import type {Scene} from "./movie";
 export function drawBossScene(ctx:CanvasRenderingContext2D,scene:Scene,time:number) {
  const p=Math.min(1,time/scene.duration),defeat=scene.bossMoment==="defeat",turn=scene.bossMoment==="turn";
  const design=BOSS_DESIGNS[scene.stage]!,x=720,y=260;
- ctx.save();ctx.strokeStyle=design.color;ctx.lineWidth=4;
+ ctx.save();drawEnvironment(ctx,scene.stage===0?"town":scene.stage===1?"crypt":"citadel",960,540);ctx.strokeStyle=design.color;ctx.lineWidth=4;
  if(scene.boss==="boogeyman") {
-  for(let i=0;i<6;i++){ctx.fillStyle=i%2?"#263c31":"#172b2e";ctx.fillRect(i*165,95,120,250);}
+
   for(let i=-2;i<=2;i++){
    const d=(p*1.5)%1;ctx.fillStyle=design.color;ctx.beginPath();ctx.arc(x-d*480,220+i*d*65,9,0,Math.PI*2);ctx.fill();
   }
   for(const side of [-1,1])drawEnemy(ctx,"clown",500+side*90+(defeat?p*250:0),310,22,time,Math.PI,false,false,0);
  } else if(scene.boss==="nergal") {
-  ctx.fillStyle="#4d3c68";ctx.fillRect(620,155,210,180);ctx.fillStyle="#a38ac0";ctx.fillRect(600,320,250,18);
+
   for(let i=0;i<12;i++){
    const angle=i*Math.PI/6+time*(turn?-1:1);ctx.fillStyle=design.color;ctx.beginPath();ctx.arc(x+Math.cos(angle)*100,210+Math.sin(angle)*75,8,0,Math.PI*2);ctx.fill();
   }
   ctx.beginPath();ctx.arc(x,y,220,Math.PI*0.75+p,Math.PI*1.25+p);ctx.stroke();
  } else {
-  ctx.fillStyle="#24233e";ctx.fillRect(0,320,960,40);
+
   for(let i=0;i<(turn?2:1);i++){
    const cx=400+i*160;ctx.beginPath();ctx.ellipse(cx,320,65,25,0,0,Math.PI*2);ctx.stroke();
    ctx.beginPath();ctx.moveTo(cx,70);ctx.lineTo(cx,320);ctx.stroke();

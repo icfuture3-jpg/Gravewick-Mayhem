@@ -32,7 +32,7 @@ try {
   await page.screenshot({path:`/tmp/grimble-watch-${time}.png`});
  }
  const images=await page.evaluate(()=>window.renderCheck('pip',2));
- assert.equal(images,5,'One table + three toy sprites + exactly one Pip silhouette');
+ assert.equal(images,6,'One environment + one table + three toys + exactly one Pip silhouette');
  await page.screenshot({path:'/tmp/pip-workshop-single-silhouette.png'});
  await page.evaluate(()=>window.renderCheck('cheer',2.8));await page.screenshot({path:'/tmp/pip-cheering-toys.png'});
  for(let stage=0;stage<3;stage++)for(const moment of ['entrance','turn','defeat']){
