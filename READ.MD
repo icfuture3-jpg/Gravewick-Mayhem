@@ -46,15 +46,15 @@ Switching heroes ends shrinking/invisibility so those personal powers cannot tra
 
 ## Action cutscenes
 
-Story battles now have automatically advancing, skippable action sequences: the trio enters each stage through lantern portals, Pip shrinks and launches a gadget, and Wisp vanishes behind firing mirror doubles. Boss arrivals get a team charge; each boss crossing half health triggers one counterattack sequence. Each defeated boss gets a finishing move and victory celebration, including the final portal sealing. Gameplay, enemy attacks, health, projectiles and cooldowns pause for the movies, then resume from their existing state. Click/Space advances a beat; Esc skips the current sequence. Endless remains uninterrupted. These use the existing animated models with cinematic magic, explosions, motion lines, camera shake and procedural sound cues—not pre-rendered video or recorded voices.
+Story battles now have automatically advancing, skippable action sequences: the trio enters each stage through lantern portals, Pip shrinks and launches a gadget, and Wisp vanishes behind firing mirror doubles. Each boss now has a dedicated entrance, half-health counterattack and defeat shot showing its actual model, setting and attack pattern. Each defeated boss also gets a team victory celebration, including the final portal sealing. Gameplay, enemy attacks, health, projectiles and cooldowns pause for the movies, then resume from their existing state. Click/Space advances a beat; Esc skips the current sequence. Endless remains uninterrupted. These use the existing animated models with cinematic magic, explosions, motion lines, camera shake and procedural sound cues—not pre-rendered video or recorded voices.
 
 ## Meet the Heroes — one personal mini-game each
 
 Open **Meet the heroes**, select a hero and play their Tale. Each has an opening backstory, **one** playable memory and a conclusion:
 
-- **Grimble:** catch five falling star shards directly in his lantern. Move beneath them or use Catch shard controls to walk to a landing spot. Missed shards fall again without losing progress; there are no followers or HOME trips.
-- **Pip:** fix six monster toys by hitting each toy's three golden parts in order. Rapid hits queue until the mallet is ready; late gadgets cannot change a different toy, and the last repair completes exactly once. His story uses a profile walk toward each toy and stops to hammer. The bevelled wooden table is a procedural 3D prop baked with the same lighting as the character models.
-- **Wisp:** collect three library pages and return each to her spellbook, which then flies to her.
+- **Grimble:** patrol a sleeping town in the opening, notice the bright starfall, walk toward it and catch its shards. In the mini-game only one shard falls at a time: a two-second preview, slow descent and visible numbered landing marker allow time to reach it. Press top-row or numpad 1–5, click Catch shard, or move manually. Misses retry without lost progress.
+- **Pip:** fix six monster toys by hitting each toy's three golden parts in order. Rapid hits queue until the mallet is ready; late gadgets cannot change a different toy, and the last repair completes exactly once. His story uses one profile silhouette, walks toward each toy and stops to hammer. A tool pegboard, spare-part shelves, drawers and timber floor frame the workshop. Toys stand on little podiums and celebrate repairs with hops, raised cheer lines and speech. The bevelled wooden table is a procedural 3D prop baked with the same lighting as the character models.
+- **Wisp:** collect three library pages and return each to her spellbook, which then flies to her. This personal mini-game has no Spellbook Bolt or Mirror Illusions buttons or keyboard powers. Combat and campaign puzzle powers are unchanged.
 
 There are no second or third playable chapters in these Tales. Replay, start/pause/resume, restart, shared sound and exits remain. Personal scores are session-only and never submitted to the campaign leaderboard.
 
@@ -72,7 +72,7 @@ The objectives use the existing models, art, rules and controls: visible bluepri
 
 ## Mini-game browser regression checks
 
-Install Chromium once with `bunx playwright install chromium`. Start `bun run dev --port 5173`, then run `bun run test:browser`. The Chromium playthrough completes all three personal memories and endings using ordinary inputs, including replay, pause/resume and restart. It controls browser time without editing game state. Engine tests separately cover all six campaign objective boundaries, paused combat, single bonus claims, resume and new-run reset. Set `GAME_URL` only to a reachable local test server to use another port.
+Install Chromium once with `bunx playwright install chromium`. Start `bun run dev --port 5173`, then run `bun run test:browser`. The Chromium playthrough completes all three personal memories and endings using ordinary inputs, including replay, pause/resume and restart. It controls browser time without editing game state. Engine tests separately cover all six campaign objective boundaries, paused combat, single bonus claims, resume and new-run reset. Set `GAME_URL` only to a reachable local test server to use another port. `bun scripts/story-scenes.browser.mjs` is an isolated renderer check for the town patrol/starfall, single-silhouette Pip, cheering podium toys and nine boss shots; it does not play the campaign.
 
 ## Runtime ownership
 
@@ -108,19 +108,19 @@ Story captions and move buttons read names directly from the same `HERO_ABILITIE
 Optional moves help in the existing mini-games without replacing their simple objectives:
 - Grimble: J **Lantern Sweep** reveals lights within 180px. K **Lantern Portal** teleports toward the mouse up to 260px, carrying following sparks, with the Grimoire's 9s cooldown.
 - Pip: existing mallet repairs use **Ham Whack**. K **Gadget Pouch** launches a randomly selected bouncing dynamite/frost/shock gadget toward the mouse; its landing repairs the highlighted part if aimed correctly (5s cooldown). The button aims at that part automatically. Gadget damage/freeze effects are not simulated against non-enemy toys.
-- Wisp: J **Spellbook Bolt** fires from the quest book toward the mouse to retrieve a page. Its button targets the next uncollected page. She still carries one page at a time and must return it to BOOK; the book's restored arrival animation is unchanged.
+- Wisp's Meet the Heroes mini-game is walking/page collection only: J/K/L cannot fire bolts or create copies. Her campaign mirror/constellation objectives and combat abilities retain their powers; the restored-book arrival is unchanged.
 
 Buttons duplicate keyboard actions. Pausing stops moves and cooldowns; restart clears effects, projectiles and cooldowns. No moves award progress after completion.
 
 ## L ultimate controls
 
-In personal mini-games, L (or the named ultimate button) is ready at every chapter start and recharges in 12 seconds. Grimble's Hidden Light illuminates the shards; Pip's Tiny Trouble shrinks him and his mallet for six seconds and doubles repair swing speed; Wisp's Mirror Illusions deliberately creates two clearly marked, six-second copies that fire bolts to retrieve pages. Her normal story and gallery remain single-Wisp; extra copies exist only during this explicitly activated move. Restart clears copies/effects and restores readiness. Pause freezes all timers.
+In personal mini-games, L (or the named ultimate button) is ready at every chapter start and recharges in 12 seconds. Grimble's Hidden Light illuminates the shards; Pip's Tiny Trouble shrinks him and his mallet for six seconds and doubles repair swing speed; Wisp's personal page memory has neither bolts nor illusions; the later campaign puzzles retain their helpers. Her normal story and gallery remain single-Wisp; extra copies exist only during this explicitly activated move. Restart clears copies/effects and restores readiness. Pause freezes all timers.
 
 In the team campaign and Endless combat, every hero now starts with a ready L / Space ultimate and has an independent meter. Using one hero no longer drains the other two. Each meter refills automatically over 12 seconds of active play (hits and discoveries still accelerate the active hero). The HUD shows readiness and remaining recharge; an early press displays a reminder. One press casts once—holding L does not auto-spend the next charge. Pause, the open Grimoire and cutscenes freeze recharge and do not cast ultimates. New runs reset all three meters to ready. Combat ultimate effects remain unchanged.
 
 ## Grimble's star-shard catching
 
-Falling crystal shards have bright trails. Move Grimble to intercept one, or use Catch shard to walk to its landing spot; each caught shard disappears and scores immediately. Missed shards loop back to the top, with no timer or failure penalty. Pause freezes the fall; restart resets catches. The keeper-lantern and star-gate campaign tasks are unchanged.
+Only the current crystal shard is shown, with a bright trail and numbered landing marker. A two-second preview precedes each slow fall. Move Grimble to intercept one, or use Catch shard to walk to its landing spot; each caught shard disappears and scores immediately. Missed shards loop back to the top, with no timer or failure penalty. Pause freezes the fall; restart resets catches. The keeper-lantern and star-gate campaign tasks are unchanged. Top-row and numpad 1–5 duplicate Catch shard navigation and do nothing before start or while paused.
 
 ## Pip's wooden toy-repair audio
 
@@ -129,3 +129,12 @@ Pip's story mallet cues and playable mini-game swings use a bundled original 140
 ## Story art
 
 Each personal memory opens with a separate prologue tableau, followed by its action scene and a distinct reward composition. Story staging holds its final pose after seven seconds rather than looping while reading. Character models and signature effects remain shared deliberately. The other six playfields remain distinct but are reached through the campaign instead of Meet the Heroes.
+
+
+## Individual boss encounters
+
+- **The Boogeyman:** alley fog and clown guards; sideways dodging against a five-shot snot fan and periodic two-clown ambush. At half health the fan widens to seven shots and fires more often.
+- **Lord Nergal:** crypt throne, orbiting crown and sweeping staff arc; thread ten-orb rings and avoid the sweep. At half health twelve-orb rings rotate the opposite way, rings fire sooner and sweeps return sooner.
+- **Brain Meteor:** citadel skyline, mental impact beams and slime pods; leave the red warning circles and manage pods. At half health paired marked impacts arrive together, with a longer interval between pairs for escape time.
+
+Each boss has its own entrance, turn and defeat composition and dialogue, using the actual monster model. These cutscenes pause combat and remain skippable. The signature mechanics and half-health phases apply whenever the boss fights in campaign or Endless; Endless still has no cinematic interruptions. Grimoire entries describe the phase changes.

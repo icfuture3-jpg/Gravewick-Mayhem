@@ -9,7 +9,8 @@ vi.mock("./heroes", () => ({drawFigure: vi.fn()}));
 it.each([0,1,2] as const)("hero %i explains the goal, shows progress and starts safely paused", (hero) => {
   const html = renderToStaticMarkup(<MiniGame hero={hero} onComplete={() => {}} onExit={() => {}} />);
   expect(html).toContain("Start mini-game");
-  expect(html).toContain(`${HERO_ABILITIES[hero].ultName} · L`);
+  if(hero!==2) expect(html).toContain(`${HERO_ABILITIES[hero].ultName} · L`);
+  else {expect(html).not.toContain("Spellbook Bolt");expect(html).not.toContain("Mirror Illusions");}
   expect(html).toContain("Restart mini-game");
   expect(html).toContain("time limit");
   expect(html).not.toContain("Continue tale");

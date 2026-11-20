@@ -471,7 +471,7 @@ export function drawFigure(
     const walkFrame = blend > 0 && mv !== undefined && wk !== undefined ? wk[Math.floor((((mv.phase % 1) + 1) % 1) * wk.length)] : undefined;
     const frame = blend > 0.5 && walkFrame !== undefined ? walkFrame : idleFrame;
     // Wisp must remain one silhouette, including during her side-view library walk.
-    const under = idx !== 2 && blend > 0 && blend < 1 ? (blend > 0.5 ? idleFrame : walkFrame) : undefined;
+    const under = idx !== 2 && !(idx===1 && mv?.side) && blend > 0 && blend < 1 ? (blend > 0.5 ? idleFrame : walkFrame) : undefined;
     if (frame !== undefined) {
       ctx.translate(x, 0);
       if (Math.cos(look) < 0) ctx.scale(-1, 1);

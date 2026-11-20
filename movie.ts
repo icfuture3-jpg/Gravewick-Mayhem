@@ -1,3 +1,4 @@
+import {BOSS_DESIGNS} from "./boss-design";
 // Short, automatically advancing action beats using the original animated models.
 export type Action = "portal" | "gadget" | "illusion" | "team" | "victory";
 export interface Actor {
@@ -10,6 +11,8 @@ export interface Actor {
 }
 export interface Scene {
   stage: number;
+  boss?: "boogeyman" | "nergal" | "meteor";
+  bossMoment?: "entrance" | "turn" | "defeat";
   soloHero?: 0 | 1 | 2;
   tint: string;
   caption?: string;
@@ -36,20 +39,18 @@ export function arrival(stage: number): Scene[] {
   ];
 }
 export function bossEntrance(stage: number): Scene[] {
-  return [beat(stage, "team", "Boss incoming!", "Lantern ready. Gadgets armed. Spellbook open. Together!", 0, 3.5)];
+ const boss=BOSS_DESIGNS[stage]!;
+ return [{...beat(stage,"team",boss.entrance,boss.intro,0,4),boss:boss.kind,bossMoment:"entrance"}];
 }
 export function turningPoint(stage: number): Scene[] {
-  return [
-    beat(stage, "portal", "Turn the tide!", "Grimble opens a flanking portal as the monster strikes!", 0, 2.6),
-    beat(stage, "team", "Triple threat!", "Tiny Pip slides in. Wisp's doubles cover him. The heroes counterattack!", 2, 3),
-  ];
+ const boss=BOSS_DESIGNS[stage]!;
+ return [{...beat(stage,"team",boss.turn,boss.counter,2,4),boss:boss.kind,bossMoment:"turn"}];
 }
 export function celebration(stage: number): Scene[] {
-  return [
-    beat(stage, "team", "Finishing move!", "Golden light, a gadget blast, and a volley of magic drive the darkness back!", 1, 3),
-    beat(stage, "victory", stage === 2 ? "GRAVEWICK SAVED!" : "VICTORY!", stage === 2
-      ? "The portal seals. Grimble, Pip and Wisp celebrate: Gravewick is safe!"
-      : "The team lands together. One triumphant pose—then on to the next fight!", -1, 3.5),
-  ];
+ const boss=BOSS_DESIGNS[stage]!;
+ return [
+  {...beat(stage,"team",boss.defeat,boss.ending,1,4),boss:boss.kind,bossMoment:"defeat"},
+  beat(stage,"victory",stage===2?"GRAVEWICK SAVED!":"VICTORY!",stage===2?"The portal seals. The three heroes celebrate: Gravewick is safe!":"The team celebrates, then sets out for the next battle.",-1,3.5),
+ ];
 }
 export const INTRO = arrival(0);

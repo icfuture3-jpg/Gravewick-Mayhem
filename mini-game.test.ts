@@ -10,13 +10,13 @@ it("Grimble catches falling shards on contact, without followers or HOME deliver
  const s=createMini(0),shard=s.sparks[0]!;
  s.px=shard.x;s.py=250;shard.fallY=200;
  stepMini(s,idle,0.05);expect(s.progress).toBe(0);
- tick(s,3);expect(shard.taken).toBe(true);expect(shard.following).toBe(false);expect(s.progress).toBe(1);
+ tick(s,44);expect(shard.taken).toBe(true);expect(shard.following).toBe(false);expect(s.progress).toBe(1);
  at(s,HOME);expect(s.progress).toBe(1);
- expect(miniObjective(s)).toContain("falling star shards");
+ expect(miniObjective(s)).toContain("Press 2");
 });
 it("missed shards fall again without resetting caught shards",()=>{
  const s=createMini(0),shard=s.sparks[0]!;s.sparks[1]!.taken=true;s.progress=1;
- shard.fallY=449;s.px=900;s.py=400;tick(s,1);
+ shard.fallY=449;s.shardTime=2;s.px=900;s.py=400;tick(s,1);
  expect(shard.fallY).toBe(65);expect(s.progress).toBe(1);expect(s.sparks[1]!.taken).toBe(true);
 });
 it("Pip must hit the highlighted broken part; wrong hits are safe and cannot skip repairs", () => {
@@ -56,7 +56,7 @@ it.each([0, 1, 2] as const)("hero %i completes all three story chapters with mat
   for (let stage = 0; stage < 3; stage++) {
     const s = createMini(hero, stage), lore = miniChapter(hero, stage);
     expect(lore.memories).toHaveLength(s.goal);
-    if (hero === 0) for (const spark of s.sparks) {at(s, spark); if(stage===0) {spark.fallY=s.py;stepMini(s,idle,0.05);} else stepMini(s,{...idle,action:true},0.05); expect(s.message).toBe(lore.memories[s.progress - 1]);}
+    if (hero === 0) for (const spark of s.sparks) {at(s, spark); if(stage===0) {spark.fallY=s.py;s.shardTime=2;stepMini(s,idle,0.05);} else stepMini(s,{...idle,action:true},0.05); expect(s.message).toContain(lore.memories[s.progress - 1]!);}
     else if(hero===1 && stage===1) for(const piece of CIRCUIT)stepMini(s,{...idle,interact:piece},0.05);
     else if(hero===1 && stage===2) for(const lock of MACHINE_LOCKS){s.tiny=6;at(s,lock);stepMini(s,{...idle,action:true},0.05);}
     else if(hero===2 && stage===1) for(let i=0;i<3;i++)for(let t=0;t<MIRROR_ANGLES[i]!;t++)stepMini(s,{...idle,interact:i},0.05);
@@ -68,7 +68,7 @@ it.each([0, 1, 2] as const)("hero %i completes all three story chapters with mat
     else for (const p of s.pages) {at(s, p); at(s, HOME); expect(s.message).toBe(lore.memories[s.progress - 1]);}
     expect(s.status).toBe("won"); expect(miniBonus(s)).toBeGreaterThan(500);
     const snapshot = structuredClone(s); tick(s, 40);
-    expect({...s, bookArrival: snapshot.bookArrival}).toEqual(snapshot);
+    expect({...s, bookArrival: snapshot.bookArrival,celebrationTime:snapshot.celebrationTime}).toEqual(snapshot);
   }
 });
 it("maps mouse input through letterboxing without changing the playfield hit areas", () => {
@@ -114,21 +114,18 @@ it("Gadget Pouch randomly selects a real gadget and repairs only the highlighted
   tick(s,13);expect(s.part).toBe(1);expect(s.projectile).toBeNull();
   stepMini(s,{...idle,skill:true},0.05);expect(s.projectile).toBeNull();
 });
-it("Spellbook Bolt retrieves only the aimed page, with no duplicate collection while carrying", () => {
-  const s=createMini(2), page=s.pages[1]!; s.px=300; s.py=300;
-  stepMini(s,{...idle,action:true,aimX:page.x,aimY:page.y},0.05);
-  expect(s.carrying).toBeNull();tick(s,13);
-  expect(s.carrying).toBe(1);expect(page.taken).toBe(true);expect(s.progress).toBe(0);
-  stepMini(s,{...idle,action:true,aimX:s.pages[0]!.x,aimY:s.pages[0]!.y},0.05);
-  expect(s.projectile).toBeNull();expect(s.pages[0]!.taken).toBe(false);
-  at(s,HOME);expect(s.progress).toBe(1);
+it("Wisp personal memory ignores J/K/L and restores pages only by walking",()=>{
+ const s=createMini(2),page=s.pages[1]!;s.px=300;s.py=300;
+ for(let i=0;i<30;i++)stepMini(s,{...idle,action:true,skill:true,ultimate:true,aimX:page.x,aimY:page.y},0.05);
+ expect(s.projectile).toBeNull();expect(s.illusions).toHaveLength(0);expect(s.carrying).toBeNull();expect(s.progress).toBe(0);expect(s.ultimateCd).toBe(0);
+ at(s,page);at(s,HOME);expect(s.progress).toBe(1);
 });
 it("Grimoire actions cannot alter a completed mini-game", () => {
   const s=createMini(1);s.status="won";const before=structuredClone(s);
-  stepMini(s,{...idle,action:true,skill:true},0.05);expect(s).toEqual(before);
+  stepMini(s,{...idle,action:true,skill:true},0.05);expect({...s,celebrationTime:before.celebrationTime}).toEqual(before);
 });
 
-it.each([0,1,2] as const)("hero %i can activate L immediately, cannot spam, and restarts ready", hero => {
+it.each([0,1] as const)("hero %i can activate L immediately, cannot spam, and restarts ready", hero => {
   const s=createMini(hero);stepMini(s,{...idle,ultimate:true},0.05);
   expect(s.ultimateCd).toBe(12);expect(s.message).toContain('activated');
   stepMini(s,{...idle,ultimate:true},0.05);expect(s.message).toContain('recharges');
@@ -144,19 +141,16 @@ it("Tiny Trouble lasts six seconds and speeds up the repair mallet",()=>{
   const p=REPAIR_PARTS[0]!;stepMini(s,{...idle,action:true,aimX:p.x,aimY:p.y},0.05);
   expect(s.swing).toBe(0.14);tick(s,121);expect(s.tiny).toBe(0);
 });
-it("Mirror Illusions creates two temporary copies which fire and retrieve a page",()=>{
-  const s=createMini(2);s.px=300;s.py=350;
-  stepMini(s,{...idle,ultimate:true},0.05);
-  expect(s.illusions).toHaveLength(2);expect(s.illusionBolts.length).toBeGreaterThan(0);
-  tick(s,14);expect(s.carrying).not.toBeNull();expect(s.pages.filter(p=>p.taken)).toHaveLength(1);
-  tick(s,121);expect(s.illusions).toHaveLength(0);
+it("Wisp still uses illusions in campaign mirror objectives",()=>{
+ const s=createMini(2,1);stepMini(s,{...idle,ultimate:true},0.05);
+ expect(s.illusions).toHaveLength(2);tick(s,60);expect(s.progress).toBeGreaterThan(0);
 });
 it("L cannot change progress or create copies after completion",()=>{
   for(const hero of [0,1,2] as const){const s=createMini(hero);s.status='won';stepMini(s,{...idle,ultimate:true},0.05);expect(s.ultimateCd).toBe(0);expect(s.illusions).toHaveLength(0);}
 });
 
 it("Catch shard controls remain usable until caught and restart resets every shard",()=>{
- const s=createMini(0);expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Catch shard 2",rescued:false});
+ const s=createMini(0);s.sparks[0]!.taken=true;s.progress=1;expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Catch shard 2",rescued:false});
  stepMini(s,{...idle,findSpark:1},0.05);tick(s,180);
  expect(s.sparks[1]!.taken).toBe(true);
  expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Shard 2 · CAUGHT ✓",rescued:true});
@@ -189,7 +183,7 @@ it("the last gadget repair finishes before a simultaneous hammer input can reset
  stepMini(s,{...idle,action:true,aimX:last.x,aimY:last.y},0.05);
  expect(s).toMatchObject({status:"won",progress:6,part:0,hammerHits:0,message:miniChapter(1,0).memories[5]});
  expect(s.projectile).toBeNull();
- const completed=structuredClone(s);stepMini(s,{...idle,action:true,skill:true},0.05);expect(s).toEqual(completed);
+ const completed=structuredClone(s);stepMini(s,{...idle,action:true,skill:true},0.05);expect({...s,celebrationTime:completed.celebrationTime}).toEqual(completed);
 });
 it("a gadget launched at an earlier toy cannot repair or interfere with the last toy",()=>{
  const s=createMini(1);s.progress=4;s.part=2;const p=REPAIR_PARTS[2];
@@ -198,4 +192,18 @@ it("a gadget launched at an earlier toy cannot repair or interfere with the last
  for(const part of REPAIR_PARTS.slice(0,2)){tick(s,6);stepMini(s,{...idle,action:true,aimX:part.x,aimY:part.y},0.05);}
  tick(s,15);expect(s).toMatchObject({progress:5,part:2,status:"playing"});
  stepMini(s,{...idle,action:true,aimX:p.x,aimY:p.y},0.05);expect(s).toMatchObject({status:"won",progress:6});
+});
+
+it("shards preview for two seconds and never descend simultaneously",()=>{
+ const s=createMini(0);s.px=900;s.py=445;
+ tick(s,38);expect(s.sparks.every(item=>item.fallY===65)).toBe(true);
+ tick(s,10);expect(s.sparks[0]!.fallY).toBeGreaterThan(65);expect(s.sparks.slice(1).every(item=>item.fallY===65)).toBe(true);
+ // A distant catch position is reachable during the preview + slow descent.
+ for(let i=0;i<5;i++){stepMini(s,{...idle,findSpark:i},0.05);tick(s,180);expect(s.sparks[i]!.taken).toBe(true);}
+ expect(s.status).toBe("won");
+});
+
+it("completed toys keep cheering without allowing more score or repair progress",()=>{
+ const s=createMini(1);s.status="won";s.progress=6;const score=miniBonus(s);
+ tick(s,20);expect(s.celebrationTime).toBeGreaterThan(0.9);expect(s.progress).toBe(6);expect(miniBonus(s)).toBe(score);
 });

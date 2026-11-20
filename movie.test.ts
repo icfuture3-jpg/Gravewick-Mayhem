@@ -18,23 +18,24 @@ function setup() {
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {frame = callback; return 1;});
   vi.stubGlobal("cancelAnimationFrame", vi.fn());
   const texts: string[] = [];
+  const marks: {color:unknown;radius:number}[]=[];let paint:unknown;
   const noop = () => {};
-  const context = new Proxy({fillText: (text: string) => texts.push(text), measureText: () => ({width: 20}),
+  const context = new Proxy({arc:(_x:number,_y:number,radius:number)=>marks.push({color:paint,radius}),fillText: (text: string) => texts.push(text), measureText: () => ({width: 20}),
     createRadialGradient: () => ({addColorStop: noop}), createLinearGradient: () => ({addColorStop: noop})},
-  {get: (target, key) => Reflect.get(target, key) ?? noop});
+  {get: (target, key) => Reflect.get(target, key) ?? noop,set:(target,key,value)=>{if(key==="fillStyle")paint=value;return Reflect.set(target,key,value);}});
   const canvas = Object.assign(new EventTarget(), {getContext: () => context});
   const phase = vi.fn();
   const game = createBrawl(canvas as unknown as HTMLCanvasElement, phase);
   let time = performance.now();
-  const tick = (count = 1) => {for (let i = 0; i < count; i++) {time += 50; frame(time);}};
+  const tick = (count = 1) => {for (let i = 0; i < count; i++) {marks.length=0;time += 50; frame(time);}};
   const key = (code: string) => {
     const down = new Event("keydown"); Object.assign(down, {code}); events.dispatchEvent(down); tick();
     const up = new Event("keyup"); Object.assign(up, {code}); events.dispatchEvent(up);
   };
   type State = {px: number; py: number; wave: number; stage: number; queue: string[]; ult: number; banner: {t: number}; score: number; active: number; invuln: number};
   const state = () => vi.mocked(drawHero).mock.lastCall![9] as State;
-  const enemy = () => vi.mocked(drawEnemy).mock.lastCall![10] as {hp: number; max: number; x: number; y: number};
-  return {game, tick, key, state, enemy, phase, texts};
+  const enemy = () => vi.mocked(drawEnemy).mock.lastCall![10] as {hp: number; max: number; x: number; y: number;t1:number;t2:number};
+  return {game, tick, key, state, enemy, phase, texts,marks};
 }
 
 it("scripts every stage with portal, gadget, illusion, boss counterattack and victory action", () => {
@@ -69,20 +70,21 @@ it("stages boss arrivals, freezes combat for one half-health counterattack, then
   // Position the simulation at the wave-three boundary without playing an entire campaign.
   Object.assign(s.state(), {wave: 3, queue: []}); s.state().banner.t = 0;
   s.tick();
-  expect(vi.mocked(drawAction).mock.lastCall![1].caption).toBe("Boss incoming!");
-  s.tick(95);
+  expect(vi.mocked(drawAction).mock.lastCall![1].caption).toBe("The alley ambush");
+  s.tick(120);
   const boss = s.enemy();
   boss.hp = boss.max / 2;
   s.tick();
-  expect(vi.mocked(drawAction).mock.lastCall![1].caption).toBe("Turn the tide!");
+  expect(vi.mocked(drawAction).mock.lastCall![1].caption).toBe("The nightmare closes in");
   const before = {x: boss.x, y: boss.y, hp: boss.hp};
   s.tick(30);
   expect(boss).toMatchObject(before);
   s.key("Escape");
   vi.mocked(drawAction).mockClear(); s.tick(5);
   expect(drawAction).not.toHaveBeenCalled(); // same half-health boss cannot retrigger
+  s.state().banner.t=0; // Let the longer boss-introduction banner finish before the clear.
   boss.hp = 1; s.state().ult = 100; s.key("KeyL"); s.tick(5);
-  expect(vi.mocked(drawAction).mock.lastCall![1].caption).toBe("Finishing move!");
+  expect(vi.mocked(drawAction).mock.lastCall![1].caption).toBe("Daybreak in the alley");
   s.tick(200);
   expect(s.state().stage).toBe(1);
   expect(vi.mocked(drawAction).mock.lastCall![1].stage).toBe(1);
@@ -95,7 +97,7 @@ it("finishes the final victory sequence before reporting victory and preserves s
   Object.assign(s.state(), {wave: 4, stage: 2, queue: []}); s.state().banner.t = 0;
   s.tick();
   expect(s.phase.mock.lastCall![0]).toBe("playing");
-  s.tick(150);
+  s.tick(170);
   expect(s.phase.mock.lastCall![0]).toBe("victory");
   expect(s.texts).toContain("GRAVEWICK SAVED!");
   expect(s.phase.mock.lastCall![1].score).toBe(5000);
@@ -191,4 +193,23 @@ it("plays all six relocated objectives between team waves, freezes combat, and r
   s.game.start("endless"); s.tick();
   expect(s.phase.mock.lastCall![1]).toMatchObject({campaignObjective: null, score: 0});
   s.game.destroy();
+});
+
+it.each(["boogeyman","nergal","meteor"] as const)("%s emits its own attacks and minions in the live simulation at both health phases",kind=>{
+ for(const fraction of [1,0.4]){
+  const s=setup();s.game.startPractice({hero:0,enemy:kind});s.tick();const foe=s.enemy();
+  Object.assign(foe,{hp:foe.max*fraction,t1:0,t2:0,x:480,y:100});
+  vi.mocked(drawEnemy).mockClear();s.tick();
+  if(kind==="boogeyman"){
+   expect(s.marks.filter(m=>m.color==="#8fe03a"&&m.radius===10)).toHaveLength(fraction===1?5:7);
+   expect(vi.mocked(drawEnemy).mock.calls.filter(call=>call[1]==="clown")).toHaveLength(2);
+  }else if(kind==="nergal"){
+   expect(s.marks.filter(m=>m.color==="#c27aff"&&m.radius===9)).toHaveLength(fraction===1?10:12);
+   expect(foe.t2).toBeCloseTo(fraction===1?5:4);
+  }else{
+   expect(s.marks.filter(m=>String(m.color).startsWith("rgba(255,60,30,")&&m.radius===80)).toHaveLength(fraction===1?1:2);
+   expect(vi.mocked(drawEnemy).mock.calls.filter(call=>call[1]==="slime")).toHaveLength(2);
+  }
+  s.game.destroy();
+ }
 });

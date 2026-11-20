@@ -1,6 +1,6 @@
 import { drawConclusion } from "./story-tableaux";
 import { drawStoryMove, storyMove, moveName } from "./story-moves";
-import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary, drawWorkshopTable } from "./tale-props";
+import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary, drawWorkshopTable, drawWorkshop } from "./tale-props";
 import { drawFigure } from "./heroes";
 import type { HeroId } from "./solo-story";
 
@@ -17,7 +17,7 @@ export function talePose(hero: HeroId, chapter: number, time: number, complete =
   const progress = complete ? 0.8 + Math.min(1, time / 4) * 0.2 : Math.min(1, Math.max(0, time / 7));
   const approach = Math.min(1, progress / 0.7);
   return {action: taleAction(hero, chapter), progress,
-    heroX: hero === 2 && chapter === 0 ? 250 + approach * 310 : hero === 0 && chapter === 1 ? (progress < 0.45 ? 220 : 480) : 220 + progress * 280,
+    heroX: hero===0 && chapter===0 ? 640 : hero === 2 && chapter === 0 ? 250 + approach * 310 : hero === 0 && chapter === 1 ? (progress < 0.45 ? 220 : 480) : 220 + progress * 280,
     heroY: hero === 2 && chapter === 0 ? 255 : hero === 1 && chapter < 2 ? 220 : 280,
     scale: hero === 1 && chapter === 2 && time >= 0.2 && time < 6.2 && !complete ? 0.45 : 1.2};
 }
@@ -54,10 +54,13 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
     ctx.fillStyle = `rgba(255,211,106,${0.2 + p * 0.8})`; ctx.fillRect(lx - 12, ly - 16, 24, 34);
     if (chapter === 0) {
       ctx.fillStyle = "#ffd36a";
-      const fall = Math.min(1, p * 2.5); star(ctx, mix(820, 650, fall), mix(20, 245, fall), 26 * (1 - p * 0.4));
-      ctx.strokeStyle = "#a68b48"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(840, 10); ctx.lineTo(mix(820, 650, fall), mix(20, 245, fall)); ctx.stroke();
-      for (let i = 0; i < 5; i++) {const t = Math.max(0, (p - 0.4 - i * 0.04) * 2.7); ctx.fillStyle = "#ffe697"; star(ctx, mix(650 + Math.cos(i) * 60, lx, t), mix(245 + Math.sin(i) * 40, ly, t), 6);}
-      label(ctx, p < 0.4 ? "A fallen star lights the night" : "Grimble catches the star shards in his lantern", 500, 50);
+      // Continue from the patrol's starfall: a close-up catch, not a second falling star.
+      ctx.fillStyle="rgba(255,225,141,0.22)";ctx.beginPath();ctx.arc(760,180,130,0,Math.PI*2);ctx.fill();
+      for(let i=0;i<5;i++){
+        const t=Math.min(1,Math.max(0,(p-i*0.12)*2.5));
+        ctx.fillStyle="#fff0ac";star(ctx,mix(780+i*10,lx,t),mix(100+i*18,ly,t),7);
+      }
+      label(ctx,"The five star shards settle safely inside his lantern",480,50);
     } else if (chapter === 1) {
       for (let i = 0; i < 5; i++) {const x = 550 + i * 70; ctx.fillStyle = "#485351"; ctx.fillRect(x - 22, 180, 44, 115); label(ctx, "Keeper", x, 170); ctx.fillStyle = i / 5 < p ? "#ffd36a" : "#595449"; ctx.fillRect(x - 8, 210, 16, 24);}
       label(ctx, "Grimble relights the missing keepers' lanterns", 480, 50);
@@ -76,6 +79,7 @@ export function drawTaleAction(ctx: CanvasRenderingContext2D, hero: HeroId, chap
       figure(310);drawStoryMove(ctx,"gadget",350,240,760,180,p,1);
       label(ctx,"Pip wires a circuit into his forgotten prototype",480,50);
     } else if (chapter === 0) {
+      drawWorkshop(ctx);
       drawWorkshopTable(ctx,390,190,500,200);
       const repair = workshopPose(time);
       drawFigure(ctx,1,repair.heroX,220,0.9,0,false,false,time,{side:true,speed:repair.walking?55:0,phase:time*0.65});

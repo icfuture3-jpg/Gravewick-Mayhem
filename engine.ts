@@ -1,3 +1,4 @@
+import {BOSS_DESIGNS,bossPattern} from "./boss-design";
 import { campaignObjective, type CampaignObjective } from "./campaign-objectives";
 import { playCutsceneCues } from "./cutscene-effects";
 import { soloScenes, SOLO_STORIES, type HeroId } from "./solo-story";
@@ -689,7 +690,7 @@ export function createBrawl(
       } else {
         const boss = BOSSES[g.stage] ?? "boogeyman";
         g.queue = [boss];
-        g.banner = { text: ENEMY[boss].name, sub: "Boss fight", t: 2.4 };
+        g.banner = { text: ENEMY[boss].name, sub: BOSS_DESIGNS[g.stage]!.hint, t: 4 };
         const [bi, bt] = BOSS_CUTS[g.stage] ?? BOSS_CUTS[0] ?? [0, ""];
         g.cuts = soloHero === null ? [{ idx: bi, text: bt }] : [];
         g.cutT = 3;
@@ -898,14 +899,15 @@ export function createBrawl(
         break;
       }
       case "boogeyman": {
+        const pattern=bossPattern(0,e.hp/e.max);
         if (dist > 190) {
           chase(e, def.speed, dt, target.x, target.y);
         }
         if (e.t1 <= 0) {
-          for (let i = -2; i <= 2; i += 1) {
+          for (let i = -(pattern.fan-1)/2; i <= (pattern.fan-1)/2; i += 1) {
             fire(e.x, e.y, toward + i * 0.22, 240, 9, "snot", 10);
           }
-          e.t1 = 2.4;
+          e.t1 = pattern.fanInterval;
           sound.tone(110, "square", 0.25, 0.14, -40);
         }
         if (e.t2 <= 0) {
@@ -917,14 +919,15 @@ export function createBrawl(
         break;
       }
       case "nergal": {
+        const pattern=bossPattern(1,e.hp/e.max);
         if (dist > 230) {
           chase(e, def.speed, dt, target.x, target.y);
         }
         if (e.t1 <= 0) {
-          for (let i = 0; i < 10; i += 1) {
-            fire(e.x, e.y, (i / 10) * TAU + g.time, 170, 8, "orb", 9);
+          for (let i = 0; i < pattern.orbs; i += 1) {
+            fire(e.x, e.y, (i / pattern.orbs) * TAU + g.time*pattern.orbDirection, 170, 8, "orb", 9);
           }
-          e.t1 = 3.6;
+          e.t1 = pattern.orbInterval;
         }
         if (e.t2 <= 0) {
           zones.push({
@@ -938,15 +941,16 @@ export function createBrawl(
             dealt: false,
             tick: 0,
           });
-          e.t2 = 5;
+          e.t2 = pattern.enraged?4:5;
         }
         break;
       }
       case "meteor": {
+        const pattern=bossPattern(2,e.hp/e.max);
         if (e.t1 <= 0) {
-          zones.push({
+          for(let impact=0;impact<pattern.impacts;impact++) zones.push({
             kind: "meteor",
-            x: target.x,
+            x: Math.max(85,Math.min(W-85,target.x+(impact===0?0:(target.x<W/2?160:-160)))),
             y: target.y,
             r: 80,
             t: 0,
@@ -955,7 +959,7 @@ export function createBrawl(
             dealt: false,
             tick: 0,
           });
-          e.t1 = 2.1;
+          e.t1 = pattern.impactInterval;
         }
         if (e.t2 <= 0) {
           edgeSpawn("slime");
