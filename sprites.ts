@@ -1,3 +1,4 @@
+import {makePipHammer,setPipHammerFrame} from "./pip-hammer";
 import {ENVIRONMENTS,environmentFrames,makeEnvironment,disposeEnvironment} from "./environments";
 // Pre-renders the 3D hero models into 2D sprite frames so the canvas game draws the same
 // characters as the "Meet the heroes" screen.
@@ -159,6 +160,14 @@ async function bakeSprites(): Promise<void> {
     const materials = new Set<THREE.Material>();
     table.traverse(object => {if(object instanceof THREE.Mesh){object.geometry.dispose(); for(const material of Array.isArray(object.material)?object.material:[object.material]) materials.add(material);}});
     for(const material of materials) material.dispose();
+    const hammer=makePipHammer();scene.add(hammer);
+    renderer.setSize(400,240,false);
+    const hammerCamera=new THREE.OrthographicCamera(-2,2,1.2,-1.2,0.1,30);
+    hammerCamera.position.set(1.5,0.6,9);hammerCamera.lookAt(1.5,0,0);
+    renderer.render(scene,hammerCamera);
+    const hammerFrame=document.createElement("canvas");hammerFrame.width=400;hammerFrame.height=240;
+    hammerFrame.getContext("2d")!.drawImage(renderer.domElement,0,0);setPipHammerFrame(hammerFrame);
+    scene.remove(hammer);disposeEnvironment(hammer);
     for (let i = 0; i < URLS.length; i += 1) {
       const gltf = await loader.loadAsync(URLS[i]!);
       bake(i, gltf);

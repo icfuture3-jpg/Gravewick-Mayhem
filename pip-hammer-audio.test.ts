@@ -1,5 +1,5 @@
 import {expect,it,vi} from "vitest";
-import {hammerImpactTimes,playHammerCues} from "./pip-hammer-audio";
+import {hammerImpactTimes,playHammerCues,playToyRepairCheer,playToyStoryCheers} from "./pip-hammer-audio";
 import type {Sound} from "./audio";
 const audio=():Sound=>({tone:vi.fn(),noise:vi.fn(),music:vi.fn(),setMuted:vi.fn(),close:vi.fn(),sample:vi.fn()});
 it.each([0,1])("syncs chapter %i taps to every mallet impact exactly once",chapter=>{
@@ -27,4 +27,16 @@ it("a dropped frame still triggers each crossed impact once",()=>{
   const s=audio();playHammerCues(s,1,0,false,0,7);
   expect(s.sample).toHaveBeenCalledTimes(6);
   playHammerCues(s,1,0,false,7,14);expect(s.sample).toHaveBeenCalledTimes(6);
+});
+
+it("toy repair sound plays once for new progress, not redraws or other heroes/objectives",()=>{
+ const s=audio();playToyRepairCheer(s,1,0,0,1);expect(s.sample).toHaveBeenCalledWith("cheer",0.55);
+ playToyRepairCheer(s,1,0,1,1);playToyRepairCheer(s,1,0,1,0);playToyRepairCheer(s,2,0,0,1);playToyRepairCheer(s,1,1,0,1);
+ expect(s.sample).toHaveBeenCalledTimes(1);
+});
+it("story toy sounds follow repair beats once and the reward does not loop",()=>{
+ const s=audio();playToyStoryCheers(s,1,0,false,0,7);expect(s.sample).toHaveBeenCalledTimes(6);
+ playToyStoryCheers(s,1,0,false,7,30);expect(s.sample).toHaveBeenCalledTimes(6);
+ playToyStoryCheers(s,1,0,true,0,1);expect(s.sample).toHaveBeenCalledTimes(7);
+ playToyStoryCheers(s,1,0,true,1,30);playToyStoryCheers(s,0,0,true,0,1);expect(s.sample).toHaveBeenCalledTimes(7);
 });

@@ -53,7 +53,7 @@ export function drawConclusion(ctx:CanvasRenderingContext2D,hero:HeroId,chapter:
   else if(chapter===1)for(let i=0;i<5;i++){ctx.fillStyle="#625371";ctx.fillRect(360+i*95,140,55,155);ctx.fillStyle="#ffdc89";ctx.fillRect(375+i*95,165,25,45);}
   else{ctx.fillStyle="#b9bd96";for(let i=0;i<7;i++)ctx.fillRect(80+i*125,250-(i%2)*35,80,110);ctx.fillStyle="#ffe19c";ctx.fillRect(630,105,115,185);}
  }else if(hero===1){
-  if(chapter===0){drawWorkshop(ctx);caption(ctx,"The toys cheer for Pip!");for(let i=0;i<6;i++)drawMonsterToy(ctx,i,380+i*75,260,true,p);}
+  if(chapter===0){drawWorkshop(ctx);caption(ctx,"The workshop is restored!");for(let i=0;i<6;i++)drawMonsterToy(ctx,i,380+i*75,260,true,p);}
   else if(chapter===1){ctx.strokeStyle="#a2f7b7";ctx.lineWidth=8;ctx.strokeRect(425,120,280,170);ctx.fillStyle="#8ae4cc";ctx.beginPath();ctx.arc(565,205,52,0,Math.PI*2);ctx.fill();caption(ctx,"The prototype powers the workshop");}
   else {ctx.fillStyle="#4d5c62";ctx.fillRect(400,90,400,220);ctx.fillStyle="#153b32";ctx.fillRect(445,120,310,145);ctx.fillStyle="#91e6ac";ctx.font="bold 30px sans-serif";ctx.fillText("MACHINE OFF",595,200);}
  }else{

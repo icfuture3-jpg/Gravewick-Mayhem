@@ -1,9 +1,10 @@
+import {drawPipHammer} from "./pip-hammer";
 import {drawEnvironment} from "./environments";
 import { workshopTable } from "./sprites";
 import { drawEnemy, type EnemyKind } from "./art";
 
 const TOY_MONSTERS: readonly EnemyKind[] = ["clown", "bat", "ghoul", "slime", "boogeyman", "nergal"];
-/** Miniatures of the actual enemies, mounted on wooden toy wheels. */
+/** Miniatures of the actual enemies, resting on fixed podiums, without wheels or speech labels. */
 export function drawMonsterToy(ctx: CanvasRenderingContext2D, index: number, x: number, y: number, fixed: boolean, time: number) {
   ctx.save();
   // A tiny solid podium stays planted while the repaired toy hops above it.
@@ -15,28 +16,13 @@ export function drawMonsterToy(ctx: CanvasRenderingContext2D, index: number, x: 
   ctx.beginPath(); ctx.roundRect(-24, -4, 48, 8, 4); ctx.fill(); ctx.stroke();
   const kind = TOY_MONSTERS[index % TOY_MONSTERS.length]!;
   drawEnemy(ctx, kind, 0, -12, kind === "boogeyman" || kind === "nergal" ? 20 : 16, fixed ? time : 0, Math.PI, false, false, 0);
-  for (const side of [-1, 1]) {
-    ctx.fillStyle = "#322139"; ctx.beginPath(); ctx.arc(side * 16, 7, 7, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "#edbe79"; ctx.beginPath(); ctx.arc(side * 16, 7, 3, 0, Math.PI * 2); ctx.fill();
-  }
-  if (fixed) {ctx.fillStyle="#fff1ad";ctx.font="bold 12px Trebuchet MS";ctx.textAlign="center";ctx.fillText(["HOORAY!","YAY!","THANKS PIP!"][index%3]!,0,-82);
-    ctx.strokeStyle="#ffe492";ctx.lineWidth=2;
-    for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*27,-48);ctx.lineTo(side*34,-58);ctx.stroke();}
-    ctx.fillStyle = "#ffe492"; ctx.beginPath(); ctx.arc(22, -48, 3, 0, Math.PI * 2); ctx.fill();}
+  if (fixed) {ctx.fillStyle="#ffe492";ctx.beginPath();ctx.arc(22,-48,3,0,Math.PI*2);ctx.fill();}
   ctx.restore();
 }
 
 /** A short bone-handled ham mallet; pivot stays in Pip's hand for the entire strike. */
 export function drawMeatMallet(ctx: CanvasRenderingContext2D, handX: number, handY: number, swing: number) {
-  ctx.save(); ctx.translate(handX, handY); ctx.rotate(-1.3 + swing * 1.65);
-  ctx.strokeStyle = "#402333"; ctx.lineWidth = 3;
-  ctx.fillStyle = "#e9d5ae"; ctx.beginPath(); ctx.roundRect(-5, -5, 48, 10, 4); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = "#c95e78"; ctx.beginPath(); ctx.ellipse(45, 0, 23, 18, -0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = "#f49aac"; ctx.beginPath(); ctx.ellipse(53, 0, 12, 14, -0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = "#fff0ce"; ctx.beginPath(); ctx.arc(55, 0, 5, 0, Math.PI * 2); ctx.fill();
-  // Fingers wrap over the handle, so it cannot read as a floating tool.
-  ctx.fillStyle = "#a4b951"; ctx.beginPath(); ctx.ellipse(0, 0, 8, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-  ctx.restore();
+  drawPipHammer(ctx,handX,handY,swing);
 }
 
 /** Crooked bookcases, jewel-coloured books, floating candles and a moonlit window. */

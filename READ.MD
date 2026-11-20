@@ -53,7 +53,7 @@ Story battles now have automatically advancing, skippable action sequences: the 
 Open **Meet the heroes**, select a hero and play their Tale. Each has an opening backstory, **one** playable memory and a conclusion:
 
 - **Grimble:** patrol a sleeping town in the opening, notice the bright starfall, walk toward it and catch its shards. In the mini-game only one shard falls at a time: a two-second preview, slow descent and visible numbered landing marker allow time to reach it. Press top-row or numpad 1–5, click Catch shard, or move manually. Misses retry without lost progress.
-- **Pip:** fix six monster toys by hitting each toy's three golden parts in order. Rapid hits queue until the mallet is ready; late gadgets cannot change a different toy, and the last repair completes exactly once. His story uses one profile silhouette, walks toward each toy and stops to hammer. A tool pegboard, spare-part shelves, drawers and timber floor frame the workshop. Toys stand on little podiums and celebrate repairs with hops, raised cheer lines and speech. The bevelled wooden table is a procedural 3D prop baked with the same lighting as the character models.
+- **Pip:** fix six monster toys by hitting each toy's three golden parts in order. Rapid hits queue until the mallet is ready; late gadgets cannot change a different toy, and the last repair completes exactly once. His story uses one profile silhouette, walks toward each toy and stops to hammer. A tool pegboard, spare-part shelves, drawers and timber floor frame the workshop. Toys stand on fixed wheel-free podiums and celebrate repairs with hops and a short nonverbal toy sound; no overhead speech text. The bevelled wooden table is a procedural 3D prop baked with the same lighting as the character models.
 - **Wisp:** collect three library pages and return each to her spellbook, which then flies to her. This personal mini-game has no Spellbook Bolt or Mirror Illusions buttons or keyboard powers. Combat and campaign puzzle powers are unchanged.
 
 There are no second or third playable chapters in these Tales. Replay, start/pause/resume, restart, shared sound and exits remain. Personal scores are session-only and never submitted to the campaign leaderboard.
@@ -148,3 +148,12 @@ Eight 1280×720 images are baked once during the existing loading screen and reu
 This changes backdrop art, not the simulation: collision bounds, hit areas, repair parts, numbered shard positions, timing, bosses, controls, scores and Wisp's collection-only personal activity remain unchanged. Interactive puzzle instruments, outlines, labels, magical effects and foreground story props remain drawn overlays for clarity; this is not a free-moving 3D camera conversion.
 
 With the local development server running, `bun scripts/environments.browser.mjs` checks all eight baked images and renders all nine objective layouts; `bun run test:browser` checks the real personal-game flows. The isolated gallery is not a full campaign playthrough.
+
+
+## Pip's repair garage, hammer and toy sounds
+
+Pip's workshop is no longer a shared bookcase layout with Wisp's library. Its asymmetric garage set has 18 hanging tools, two toothed hand saws, a circular saw blade, drill press, bench vice, long repair bench, red drawers, exposed beams and scrap-gear crates. These are static background props; there is no new saw gameplay or hazard. Wisp's moonlit library is unchanged.
+
+Pip's ham hammer is now a rounded 3D prop with a bone handle, wrapped grip, shaded pink head and visible cut face/marrow. It is baked with the character light rig and cached once, then used at the same hand pivot in story/mini-game and combat art. The toys' small wheels and overhead cheer words are removed; fixed podiums remain.
+
+A bundled original 820ms nonverbal toy-whistle/applause sound plays once per newly fixed toy, at each story repair, and once in the reward scene. It does not repeat while reading or redraws. Shared mute suppresses it; pausing/restarting stops the mini-game sample, and exiting closes audio. The effect contains no spoken words or voice recording. The wood-knock hit sound remains. Human listening is still needed to judge subjective sound quality.

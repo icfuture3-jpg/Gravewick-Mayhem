@@ -14,3 +14,14 @@ export function playHammerCues(sound: Sound, hero: HeroId, chapter: number, comp
     sound.sample?.("wood", 0.75);
   }
 }
+
+/** One cheer per newly repaired toy, never on redraws, pauses or other objectives. */
+export function playToyRepairCheer(sound:Sound,hero:HeroId,stage:number,before:number,after:number){
+ if(hero===1 && stage===0 && after>before)sound.sample?.("cheer",0.55);
+}
+/** Story repairs and the reward have one-shot cues, not a loop while reading. */
+export function playToyStoryCheers(sound:Sound,hero:HeroId,chapter:number,complete:boolean,previous:number,time:number){
+ if(hero!==1 || chapter!==0)return;
+ const times=complete?[0.2]:hammerImpactTimes(chapter).map(impact=>impact+0.12);
+ for(const cue of times)if(previous<cue && time>=cue)sound.sample?.("cheer",0.5);
+}

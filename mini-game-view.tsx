@@ -1,3 +1,4 @@
+import {playToyRepairCheer} from "./pip-hammer-audio";
 import { challengeName, challengeRules, challengeHit, MACHINE_LOCKS, SKY_STARS } from "./chapter-challenges";
 import { createSound } from "./audio";
 import { miniChapter } from "./mini-backstory";
@@ -23,6 +24,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
   const canvas = useRef<HTMLCanvasElement>(null);
   const state = useRef(createMini(hero, stage));
   const [running, setRunning] = useState(false);
+  useEffect(()=>{if(!running)sound.current?.stopSample?.("cheer");},[running]);
   const [version, setVersion] = useState(0);
   const snapshot = () => ({progress: state.current.progress, status: state.current.status, message: state.current.message,
     objective: campaign && state.current.status === "won" ? "Objective complete! Return to battle when ready." : miniObjective(state.current), part: state.current.part, carrying: state.current.carrying, skillCd: state.current.skillCd, ultimateCd: state.current.ultimateCd, tiny: state.current.tiny, illusions: state.current.illusions.length});
@@ -53,11 +55,12 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
     const draw = (now: number) => {
       const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
       const s = state.current;
-      const hitsBefore = s.hammerHits;
+      const hitsBefore = s.hammerHits,progressBefore=s.progress;
       // Preserve quick repair clicks until the mallet is ready instead of discarding them.
       if (running) stepMini(s, {x: Number(keys.has("KeyD") || keys.has("ArrowRight")) - Number(keys.has("KeyA") || keys.has("ArrowLeft")),
         y: Number(keys.has("KeyS") || keys.has("ArrowDown")) - Number(keys.has("KeyW") || keys.has("ArrowUp")),
         aimX: aim.current.x, aimY: aim.current.y, ...(hero===1 && stage===0 && actions.current[0]?.action && s.swing>dt ? {} : actions.current.shift())}, dt);
+      if(sound.current)playToyRepairCheer(sound.current,hero,stage,progressBefore,s.progress);
       if(s.hammerHits > hitsBefore) sound.current?.sample?.("wood",0.75);
       drawMini(ctx, s, aim.current.x, aim.current.y);
       if (now - lastView > 80) {setView(snapshot()); lastView = now;}
@@ -76,7 +79,7 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
     raf = requestAnimationFrame(draw);
     return () => {cancelAnimationFrame(raf); clear(); window.removeEventListener("keydown", keydown); window.removeEventListener("keyup", keyup); window.removeEventListener("blur", blur); node.removeEventListener("pointermove", move); node.removeEventListener("pointerdown", click);};
   }, [hero, running, version]);
-  const restart = () => {actions.current = []; aim.current = {x: 458, y: 225}; state.current = createMini(hero, stage); setView(snapshot()); setRunning(false); setVersion((n) => n + 1);};
+  const restart = () => {sound.current?.stopSample?.("cheer");actions.current = []; aim.current = {x: 458, y: 225}; state.current = createMini(hero, stage); setView(snapshot()); setRunning(false); setVersion((n) => n + 1);};
   const walkTo = (point: {x: number; y: number}) => queue({moveTo: true, aimX: point.x, aimY: point.y});
   const disabled = !running || view.status !== "playing";
   return <div style={{position: "absolute", inset: 0, zIndex: 70, background: "#10091e", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: 12, boxSizing: "border-box", overflow: "auto"}}>

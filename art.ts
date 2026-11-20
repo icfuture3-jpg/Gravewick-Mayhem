@@ -1,3 +1,4 @@
+import {drawPipHammer} from "./pip-hammer";
 import {drawEnvironment} from "./environments";
 // Cartoon canvas drawing: arenas, heroes, and monsters with chunky outlines.
 
@@ -189,22 +190,8 @@ export function drawHero(
     ctx.beginPath(); ctx.moveTo(30, -12); ctx.lineTo(30, 16); ctx.stroke();
     ctx.restore();
   } else if (idx === 1) {
-    // Pip's ham club.
-    ctx.save();
-    ctx.rotate(aim + swing * 1.8 - 0.9);
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 3;
-    ctx.fillStyle = "#f08aa0";
-    ctx.beginPath();
-    ctx.ellipse(34, 0, 17, 11, 0, 0, TAU);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#fff";
-    ctx.beginPath();
-    ctx.arc(46, 0, 5, 0, TAU);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    // The same lit 3D ham mallet used in his workshop scenes.
+    ctx.save();ctx.rotate(aim);drawPipHammer(ctx,18,0,swing);ctx.restore();
   } else {
     // Wisp's spellbook floats beside her and glows when firing.
     ctx.save(); ctx.translate(Math.cos(aim) * 27, Math.sin(aim) * 20 - 12 + Math.sin(time * 4) * 4);
