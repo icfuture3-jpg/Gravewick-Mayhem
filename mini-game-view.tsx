@@ -11,6 +11,7 @@ const button: CSSProperties = {padding: "8px 16px", color: "white", background: 
 export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, onMuted, campaign = false}: {
   hero: HeroId; stage?: number; campaign?: boolean; onComplete: (bonus: number) => void; onExit: () => void; muted?: boolean; onMuted?: (muted: boolean) => void;
 }) {
+  const collectionOnly = hero===2 && stage===0;
   const lore = miniChapter(hero, stage);
   const sound = useRef<ReturnType<typeof createSound> | null>(null);
   useEffect(() => {
@@ -39,6 +40,9 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
     const keydown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLButtonElement && (e.code === "Space" || e.code === "Enter")) return;
       if (e.code === "Space" || e.code.startsWith("Arrow")) e.preventDefault();
+      if(!e.repeat && hero===0 && stage===0 && /^(Digit|Numpad)[1-5]$/.test(e.code)) {
+        e.preventDefault();queue({findSpark:Number(e.code.slice(-1))-1});return;
+      }
       if (!e.repeat && (e.code === "KeyJ" || (e.code === "Space" && hero === 1))) queue({action: true});
       if (!e.repeat && e.code === "KeyL") queue({ultimate:true});
       if (!e.repeat && e.code === "KeyK" && hero !== 2) queue({skill: true});
@@ -99,12 +103,12 @@ export function MiniGame({hero, stage = 0, onComplete, onExit, muted = false, on
         : stage > 0 ? <button disabled={disabled} style={button} onClick={() => queue({action:true})}>{stage===1 ? "Light nearby lantern" : "Activate nearby seal"} · J</button> : null}
       </>}
     </div>
-    <div role="group" aria-label="Grimoire moves" style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
+    {!collectionOnly && <div role="group" aria-label="Grimoire moves" style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"center"}}>
       <button style={button} disabled={disabled || (stage===1 && hero===2) || (hero === 2 && view.carrying !== null)} onClick={() => queue({action:true, ...(hero === 2 && stage===0 ? {aimX:(state.current.pages.find(p => !p.taken)?.x ?? aim.current.x), aimY:(state.current.pages.find(p => !p.taken)?.y ?? aim.current.y)} : {})})}>{HERO_ABILITIES[hero].primaryName} · J</button>
       {(hero===0 || (hero===1 && stage===0)) && <button style={button} disabled={disabled || view.skillCd > 0} onClick={() => queue({skill:true, ...(hero === 1 ? {aimX:REPAIR_PARTS[state.current.part]!.x,aimY:REPAIR_PARTS[state.current.part]!.y} : {})})}>{HERO_ABILITIES[hero].skillName} · K{view.skillCd > 0 ? ` (${Math.ceil(view.skillCd)}s)` : ""}</button>}
       <button style={button} disabled={disabled || view.ultimateCd > 0} onClick={() => queue({ultimate:true})}>{HERO_ABILITIES[hero].ultName} · L{view.ultimateCd > 0 ? ` (${Math.ceil(view.ultimateCd)}s)` : " · Ready"}</button>
-    </div>
-    <div aria-live="polite" style={{fontSize:14,color:"#ffd36a"}}>{view.tiny > 0 ? `Tiny Trouble active · ${Math.ceil(view.tiny)}s · ${stage===2 ? "faster movement" : "faster mallet"}` : view.illusions > 0 ? `${view.illusions} Mirror Illusions active · ${stage===0?"retrieving pages":stage===1?"lighting the mirror targets":"casting constellation bolts"}` : "L ultimate: ready at chapter start, 12s recharge. Pausing freezes recharge."}</div>
+    </div>}
+    {!collectionOnly && <div aria-live="polite" style={{fontSize:14,color:"#ffd36a"}}>{view.tiny > 0 ? `Tiny Trouble active · ${Math.ceil(view.tiny)}s · ${stage===2 ? "faster movement" : "faster mallet"}` : view.illusions > 0 ? `${view.illusions} Mirror Illusions active · ${stage===0?"retrieving pages":stage===1?"lighting the mirror targets":"casting constellation bolts"}` : "L ultimate: ready at chapter start, 12s recharge. Pausing freezes recharge."}</div>}
     {onMuted && <button style={button} onClick={() => onMuted(!muted)}>Sound: {muted ? "off" : "on"}</button>}
     <div role="status" style={{fontSize: 14}}>{view.status === "won" ? `Challenge complete! +${miniBonus(state.current)} bonus` : running ? "Playing · No time limit" : state.current.elapsed > 0 ? "Paused · Your progress is safe" : "Ready when you are"}</div>
     <div style={{display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center"}}>

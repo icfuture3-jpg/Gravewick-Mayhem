@@ -23,7 +23,7 @@ async function canvasClick(x,y) {
 async function enter(name) {
   await click('Meet the heroes'); await click(`Select ${name}`);
   await page.getByRole('button',{name:new RegExp(`Play ${name}`)}).click(); await settle();
-  await page.clock.runFor(1600);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-prologue.png`});
+  await page.clock.runFor(3000);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-prologue.png`});
   await click('Continue story');await page.clock.runFor(1800);await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-action-1.png`});await click('Play this memory');
 }
 try {
@@ -40,6 +40,10 @@ try {
       await page.screenshot({path:`/tmp/${name.toLowerCase()}-unique-game-${chapter+1}.png`});
       await click('Start mini-game');
       if(hero===2 && chapter===0) {
+        assert.equal(await button('Spellbook Bolt · J').count(),0);
+        assert.equal(await page.getByRole('button',{name:/Mirror Illusions/}).count(),0);
+        await page.keyboard.press('KeyJ');await page.keyboard.press('KeyL');await page.clock.runFor(1200);
+        await requireText('0/3 pages restored');
         // WASD remains usable alongside click-to-walk and navigation buttons.
         await page.keyboard.down('KeyD'); await page.clock.runFor(150); await page.keyboard.up('KeyD');
       }
@@ -51,7 +55,8 @@ try {
       if(hero===0) {
         for(let i=0;i<5;i++) {
           if(await button(`Shard ${i+1} · CAUGHT ✓`).count()) continue;
-          await click(`Catch shard ${i+1}`); await page.clock.runFor(8000);
+          // Mix top-row and numpad hotkeys: neither edits game state.
+          await page.keyboard.press(i%2?`Numpad${i+1}`:`Digit${i+1}`); await page.clock.runFor(8000);
           await requireText(`Shard ${i+1} · CAUGHT ✓`);
         }
         assert.equal(await button('Guide sparks HOME').count(),0);

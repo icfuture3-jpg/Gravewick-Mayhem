@@ -2,7 +2,7 @@ import { drawChapterChallenge } from "./chapter-art";
 import { drawStoryMove } from "./story-moves";
 import { drawHero } from "./art";
 import { drawFigure } from "./heroes";
-import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary, drawWorkshopTable } from "./tale-props";
+import { drawMeatMallet, drawMonsterToy, drawWhimsicalLibrary, drawWorkshopTable, drawWorkshop } from "./tale-props";
 import { HOME, bookPose, REPAIR_PARTS, miniObjective, shadowPosition, type MiniState } from "./mini-game";
 
 function text(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, color = "#fff2ca", size = 18) {
@@ -51,7 +51,9 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
         text(ctx,`${s.stage===1 ? "LANTERN" : "SEAL"} ${i+1}`,point.x,point.y+52,"#fff1c5",14);
       });
     }
-    for (const shard of s.sparks) if (s.stage===0 && !shard.taken) {
+    for (const shard of s.sparks) if (s.stage===0 && !shard.taken && s.sparks.indexOf(shard)===s.progress) {
+      ring(ctx,shard.x,shard.y,30,"#ffdf76");
+      text(ctx,`Press ${s.progress+1}`,shard.x,shard.y+50,"#ffe697",16);
       ctx.save(); ctx.shadowColor="#ffdf76"; ctx.shadowBlur=20;
       ctx.strokeStyle="#ffe7a2"; ctx.lineWidth=2;
       ctx.beginPath(); ctx.moveTo(shard.x,shard.fallY-32); ctx.lineTo(shard.x,shard.fallY-12); ctx.stroke();
@@ -61,16 +63,17 @@ export function drawMini(ctx: CanvasRenderingContext2D, s: MiniState, aimX: numb
       ctx.restore();
     }
   } else {
-    ctx.fillStyle = "#302035"; ctx.fillRect(0, 0, 960, 480);
+    drawWorkshop(ctx);
+    ctx.fillStyle="#604635";ctx.fillRect(0,360,960,120);
     text(ctx, ["MARKET TOY REPAIR", "PROTOTYPE WORKSHOP", "NIGHTMARE MACHINE REPAIR"][s.stage]!, 480, 96, "#e7bb84", 20);
     for (let i = 0; i < 6; i++) {
       const x = 155 + i * 130;
-      drawMonsterToy(ctx, i, x, 170, i < s.progress, s.elapsed);
+      drawMonsterToy(ctx, i, x, 170, i < s.progress, s.elapsed+s.celebrationTime);
       text(ctx, i < s.progress ? "FIXED ✓" : `Toy ${i + 1}`, x, 195, i < s.progress ? "#b7e68a" : "#c5b0ca", 14);
     }
     drawWorkshopTable(ctx,225,240,540,210);
     ctx.save(); ctx.translate(480, 280); ctx.scale(1.7, 1.7);
-    drawMonsterToy(ctx, Math.min(5, s.progress), 0, 0, s.status === "won", s.elapsed); ctx.restore();
+    drawMonsterToy(ctx, Math.min(5, s.progress), 0, 0, s.status === "won", s.elapsed+s.celebrationTime); ctx.restore();
     if (s.status === "playing") for (let i = 0; i < REPAIR_PARTS.length; i++) {
       const p = REPAIR_PARTS[i]!;
       ring(ctx, p.x, p.y, i === s.part ? 24 : 16, i === s.part ? "#ffdc6a" : i < s.part ? "#a8dc8a" : "#7c687e");

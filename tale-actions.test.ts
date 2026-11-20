@@ -8,7 +8,7 @@ it("assigns a unique action to each described chapter, not generic combat", () =
   expect([0,1,2].map((i) => taleAction(2,i))).toEqual(["mirror-book","mirror-doubts","final-page"]);
 });
 it("moves the character through the scene, shrinks Pip under the scanner, and holds completed conclusions", () => {
-  expect(talePose(0,0,5).heroX).toBeGreaterThan(talePose(0,0,0).heroX);
+  expect(talePose(0,0,5).heroX).toBe(talePose(0,0,0).heroX); // Catch close-up follows the patrol, not another approach.
   expect(talePose(1,2,3.5).scale).toBeLessThan(talePose(1,2,0).scale);
   expect(talePose(0,2,10,true).progress).toBe(1);
   expect(talePose(2,2,0,true).progress).toBeGreaterThanOrEqual(0.8);

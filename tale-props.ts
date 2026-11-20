@@ -5,7 +5,10 @@ const TOY_MONSTERS: readonly EnemyKind[] = ["clown", "bat", "ghoul", "slime", "b
 /** Miniatures of the actual enemies, mounted on wooden toy wheels. */
 export function drawMonsterToy(ctx: CanvasRenderingContext2D, index: number, x: number, y: number, fixed: boolean, time: number) {
   ctx.save();
-  ctx.translate(x, y);
+  // A tiny solid podium stays planted while the repaired toy hops above it.
+  ctx.fillStyle="#685077";ctx.fillRect(x-30,y+10,60,14);
+  ctx.fillStyle="#cbb17b";ctx.beginPath();ctx.ellipse(x,y+10,30,9,0,0,Math.PI*2);ctx.fill();
+  ctx.translate(x, y-(fixed?Math.abs(Math.sin(time*5+index))*12:0));
   ctx.rotate(fixed ? Math.sin(time * 4 + index) * 0.05 : -0.12);
   ctx.fillStyle = "#b8824f"; ctx.strokeStyle = "#322139"; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.roundRect(-24, -4, 48, 8, 4); ctx.fill(); ctx.stroke();
@@ -15,7 +18,10 @@ export function drawMonsterToy(ctx: CanvasRenderingContext2D, index: number, x: 
     ctx.fillStyle = "#322139"; ctx.beginPath(); ctx.arc(side * 16, 7, 7, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#edbe79"; ctx.beginPath(); ctx.arc(side * 16, 7, 3, 0, Math.PI * 2); ctx.fill();
   }
-  if (fixed) {ctx.fillStyle = "#ffe492"; ctx.beginPath(); ctx.arc(22, -48, 3, 0, Math.PI * 2); ctx.fill();}
+  if (fixed) {ctx.fillStyle="#fff1ad";ctx.font="bold 12px Trebuchet MS";ctx.textAlign="center";ctx.fillText(["HOORAY!","YAY!","THANKS PIP!"][index%3]!,0,-82);
+    ctx.strokeStyle="#ffe492";ctx.lineWidth=2;
+    for(const side of [-1,1]){ctx.beginPath();ctx.moveTo(side*27,-48);ctx.lineTo(side*34,-58);ctx.stroke();}
+    ctx.fillStyle = "#ffe492"; ctx.beginPath(); ctx.arc(22, -48, 3, 0, Math.PI * 2); ctx.fill();}
   ctx.restore();
 }
 
@@ -76,4 +82,28 @@ export function drawWhimsicalLibrary(ctx: CanvasRenderingContext2D, time: number
 /** The furniture is a lit 3D bake, like the character sprites, not a flat rectangle. */
 export function drawWorkshopTable(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
   if (workshopTable) ctx.drawImage(workshopTable,x,y,width,height);
+}
+
+/** Shelves, pegboard tools, spare parts, drawers and a window make the room a workshop. */
+export function drawWorkshop(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle="#302633";ctx.fillRect(0,0,960,360);
+  ctx.fillStyle="#604635";ctx.fillRect(0,290,960,70);
+  ctx.strokeStyle="#846047";ctx.lineWidth=2;
+  for(let x=0;x<960;x+=80){ctx.beginPath();ctx.moveTo(x,290);ctx.lineTo(x-90,360);ctx.stroke();}
+  ctx.fillStyle="#765638";ctx.beginPath();ctx.roundRect(350,65,260,120,8);ctx.fill();
+  for(let x=365;x<600;x+=20)for(let y=80;y<180;y+=20){ctx.fillStyle="#392e2b";ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fill();}
+  for(let i=0;i<5;i++){
+    const x=375+i*48;ctx.strokeStyle="#d7c1a0";ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(x,100);ctx.lineTo(x,150);ctx.stroke();
+    ctx.fillStyle=i%2?"#a7b85d":"#bf7856";ctx.fillRect(x-10,92,20,12);
+  }
+  for(const x of [50,700]) {
+    ctx.fillStyle="#44323a";ctx.fillRect(x,80,200,180);
+    for(let row=0;row<3;row++){
+      for(let i=0;i<4;i++){ctx.fillStyle=["#a7b85d","#c89c68","#7bafaa","#b97587"][i]!;ctx.beginPath();ctx.roundRect(x+12+i*45,100+row*50,30,30,5);ctx.fill();}
+      ctx.fillStyle="#a57549";ctx.fillRect(x,135+row*50,200,10);
+    }
+  }
+  ctx.fillStyle="#8d6544";ctx.fillRect(65,260,190,45);
+  for(let i=0;i<3;i++){ctx.strokeStyle="#382d29";ctx.strokeRect(70+i*60,265,55,35);ctx.fillStyle="#d5b36b";ctx.fillRect(90+i*60,278,14,5);}
+  ctx.fillStyle="#c8a96c";ctx.font="bold 19px Trebuchet MS";ctx.textAlign="center";ctx.fillText("PIP'S WORKSHOP",480,35);
 }

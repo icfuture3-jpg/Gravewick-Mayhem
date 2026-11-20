@@ -111,7 +111,7 @@ async function bakeSprites(): Promise<void> {
     const walk = i < 3 && walkClip !== undefined ? renderClip(walkClip, 16) : undefined;
     // Personal approaches use real profile walk clips, not front-facing runs.
     let side: Sprite["side"];
-    if (i === 1 || i === 2) {
+    if (i < 3) {
       cam.position.set(center.x - 20, center.y, center.z);
       cam.lookAt(center);
       const sideWalkClip = gltf.animations.find((c) => c.name === "walk") ?? walkClip;

@@ -1,3 +1,4 @@
+import { drawBossScene } from "./boss-scenes";
 import { HERO_ABILITIES } from "./hero-abilities";
 import { drawMeatMallet } from "./tale-props";
 import { drawStoryMove } from "./story-moves";
@@ -8,6 +9,7 @@ import type { Scene } from "./movie";
 
 // Cutscene-only animation. No gameplay positions, health, cooldowns or damage change here.
 export function drawAction(ctx: CanvasRenderingContext2D, scene: Scene, time: number) {
+  if(scene.boss){drawBossScene(ctx,scene,time);return;}
   const p = Math.min(1, Math.max(0, time / scene.duration));
   const impact = Math.max(0, 1 - Math.abs(p - 0.62) * 7);
   const hero = (idx: number, x: number, y: number, scale = 1, alpha = 1) => {
