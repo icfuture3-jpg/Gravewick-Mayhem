@@ -1,5 +1,5 @@
 import {expect, it, vi} from "vitest";
-import {drawTaleAction, taleAction, talePose} from "./tale-actions";
+import {drawTaleAction, taleAction, talePose, workshopPose} from "./tale-actions";
 import {drawFigure} from "./heroes";
 vi.mock("./heroes", () => ({drawFigure: vi.fn()}));
 it("assigns a unique action to each described chapter, not generic combat", () => {
@@ -57,4 +57,16 @@ it("Tiny Trouble holds Pip small for six seconds instead of a looping size wobbl
   expect(talePose(1,2,0.2).scale).toBe(0.45);
   expect(talePose(1,2,6.1).scale).toBe(0.45);
   expect(talePose(1,2,6.3).scale).toBe(1.2);
+});
+
+it("walks Pip in profile toward the toys and stops running while hammering the sixth toy",()=>{
+ const ctx=new Proxy({}, {get:()=>vi.fn()}) as CanvasRenderingContext2D;
+ for(const time of [0.4,1,3,6.5,7]) {
+  vi.mocked(drawFigure).mockClear();drawTaleAction(ctx,1,0,time);
+  const pose=workshopPose(time),call=vi.mocked(drawFigure).mock.calls[0]!;
+  expect(call[2]).toBe(pose.heroX);expect(call[9]).toMatchObject({side:true,speed:pose.walking?55:0});
+ }
+ expect(workshopPose(1).heroX).toBeGreaterThan(workshopPose(0.4).heroX);
+ expect(workshopPose(6.5)).toMatchObject({toy:5,walking:false});
+ expect(workshopPose(7)).toMatchObject({toy:5,walking:false,fixed:true});
 });

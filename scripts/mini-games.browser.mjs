@@ -49,26 +49,26 @@ try {
       await click('Resume mini-game');
       if(chapter===0) await page.screenshot({path:`/tmp/${name.toLowerCase()}-mini-game-preview.png`});
       if(hero===0) {
-        const sparks=[[130,150],[330,260],[550,120],[790,230],[740,390]];
         for(let i=0;i<5;i++) {
-          if(await button(`Spark ${i+1} · HOME ✓`).count()) continue; // Incidental followers can arrive together.
-          if(i===0) await canvasClick(...sparks[i]); else if(await button(`Find spark ${i+1}`).count()) await click(`Find spark ${i+1}`);
-          await page.clock.runFor(4000);
-          await requireText('following');
-          await click('Guide sparks HOME'); await page.clock.runFor(4000);
-          const rescued=Number((await text()).match(/(\d)\/5 sparks home/)[1]);
-          assert.ok(rescued>=i+1, 'Every visited spark must reach home');
+          if(await button(`Shard ${i+1} · CAUGHT ✓`).count()) continue;
+          await click(`Catch shard ${i+1}`); await page.clock.runFor(8000);
+          await requireText(`Shard ${i+1} · CAUGHT ✓`);
         }
+        assert.equal(await button('Guide sparks HOME').count(),0);
       } else if(hero===1) {
         // A wrong part has no penalty or progress, and is clearly explained.
         await canvasClick(505,255); await page.clock.runFor(350);
         await requireText('no penalty'); await requireText('0/6 toys repaired');
-        for(let toy=0;toy<6;toy++) for(let part=0;part<3;part++) {
+        for(let toy=0;toy<5;toy++) for(let part=0;part<3;part++) {
           const points=[[458,225],[505,255],[480,290]];
           if(toy===0) await canvasClick(...points[part]);
           else await click(`Hit part ${part+1} · GOLD`);
           await page.clock.runFor(350);
         }
+        // Last toy: rapid sequential clicks during a swing must queue, not vanish.
+        for(let part=1;part<=3;part++) await page.getByRole('button',{name:new RegExp(`^Hit part ${part}`)}).click();
+        await page.clock.runFor(1400); await requireText('6/6 toys repaired');
+        await page.clock.runFor(1000); await requireText('Challenge complete!');
       } else {
         const pages=[[185,180],[735,180],[770,350]];
         for(let i=0;i<3;i++) {
@@ -90,7 +90,7 @@ try {
     await click('Start mini-game');
     // Restart safely resets partial progress and returns to the ready state.
     if(hero===1) {await canvasClick(458,225); await page.clock.runFor(400);}
-    else {await click(hero===0?'Find spark 1':'Collect page 1'); await page.clock.runFor(4000);}
+    else {await click(hero===0?'Catch shard 1':'Collect page 1'); await page.clock.runFor(4000);}
     await click('Restart mini-game'); await requireText('Ready when you are');
     await requireText(`0/${hero===0?5:hero===1?6:3}`);
     await click('Back to Gravewick Tales'); await click('Back to main menu');

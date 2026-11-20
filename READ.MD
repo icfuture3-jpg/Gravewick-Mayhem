@@ -52,8 +52,8 @@ Story battles now have automatically advancing, skippable action sequences: the 
 
 Open **Meet the heroes**, select a hero and play their Tale. Each has an opening backstory, **one** playable memory and a conclusion:
 
-- **Grimble:** find five fallen-star sparks and guide them HOME.
-- **Pip:** fix six monster toys by hitting each toy's three golden parts in order.
+- **Grimble:** catch five falling star shards directly in his lantern. Move beneath them or use Catch shard controls to walk to a landing spot. Missed shards fall again without losing progress; there are no followers or HOME trips.
+- **Pip:** fix six monster toys by hitting each toy's three golden parts in order. Rapid hits queue until the mallet is ready; late gadgets cannot change a different toy, and the last repair completes exactly once. His story uses a profile walk toward each toy and stops to hammer. The bevelled wooden table is a procedural 3D prop baked with the same lighting as the character models.
 - **Wisp:** collect three library pages and return each to her spellbook, which then flies to her.
 
 There are no second or third playable chapters in these Tales. Replay, start/pause/resume, restart, shared sound and exits remain. Personal scores are session-only and never submitted to the campaign leaderboard.
@@ -114,13 +114,13 @@ Buttons duplicate keyboard actions. Pausing stops moves and cooldowns; restart c
 
 ## L ultimate controls
 
-In personal mini-games, L (or the named ultimate button) is ready at every chapter start and recharges in 12 seconds. Grimble's Hidden Light reveals all lost sparks; Pip's Tiny Trouble shrinks him and his mallet for six seconds and doubles repair swing speed; Wisp's Mirror Illusions deliberately creates two clearly marked, six-second copies that fire bolts to retrieve pages. Her normal story and gallery remain single-Wisp; extra copies exist only during this explicitly activated move. Restart clears copies/effects and restores readiness. Pause freezes all timers.
+In personal mini-games, L (or the named ultimate button) is ready at every chapter start and recharges in 12 seconds. Grimble's Hidden Light illuminates the shards; Pip's Tiny Trouble shrinks him and his mallet for six seconds and doubles repair swing speed; Wisp's Mirror Illusions deliberately creates two clearly marked, six-second copies that fire bolts to retrieve pages. Her normal story and gallery remain single-Wisp; extra copies exist only during this explicitly activated move. Restart clears copies/effects and restores readiness. Pause freezes all timers.
 
 In the team campaign and Endless combat, every hero now starts with a ready L / Space ultimate and has an independent meter. Using one hero no longer drains the other two. Each meter refills automatically over 12 seconds of active play (hits and discoveries still accelerate the active hero). The HUD shows readiness and remaining recharge; an early press displays a reminder. One press casts once—holding L does not auto-spend the next charge. Pause, the open Grimoire and cutscenes freeze recharge and do not cast ultimates. New runs reset all three meters to ready. Combat ultimate effects remain unchanged.
 
-## Grimble's star rescue controls
+## Grimble's star-shard catching
 
-Guide sparks HOME ignores held movement until Grimble arrives and delivers all followers. Find controls show following or rescued states. The keeper-lantern and star-gate tasks use their original controls during Mayhem campaign objectives, not additional personal memories.
+Falling crystal shards have bright trails. Move Grimble to intercept one, or use Catch shard to walk to its landing spot; each caught shard disappears and scores immediately. Missed shards loop back to the top, with no timer or failure penalty. Pause freezes the fall; restart resets catches. The keeper-lantern and star-gate campaign tasks are unchanged.
 
 ## Pip's wooden toy-repair audio
 

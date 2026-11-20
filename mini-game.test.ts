@@ -1,30 +1,23 @@
 import {CIRCUIT,MIRROR_ANGLES,MACHINE_LOCKS,SKY_STARS} from "./chapter-challenges";
 import { expect, it } from "vitest";
-import { createMini, stepMini, miniBonus, miniPoint, miniObjective, HOME, sparkControl, bookPose, REPAIR_PARTS, shadowPosition, type MiniInput, type MiniState } from "./mini-game";
+import { createMini, stepMini, miniBonus, miniPoint, miniObjective, HOME, sparkControl, bookPose, REPAIR_PARTS, type MiniInput, type MiniState } from "./mini-game";
 import { miniChapter } from "./mini-backstory";
 const idle: MiniInput = {x: 0, y: 0, aimX: 480, aimY: 200};
 const tick = (s: MiniState, frames: number) => {for (let i = 0; i < frames; i++) stepMini(s, idle, 0.05);};
 const at = (s: MiniState, p: {x: number; y: number}) => {s.px = p.x; s.py = p.y; stepMini(s, idle, 0.05);};
 
-it("Grimble reveals sparks, gains followers, and only scores when he guides them home", () => {
-  const s = createMini(0), spark = s.sparks[0]!;
-  at(s, {x: spark.x + 90, y: spark.y});
-  expect(spark.found).toBe(true); expect(spark.following).toBe(false);
-  at(s, spark);
-  expect(spark.following).toBe(true); expect(s.progress).toBe(0);
-  expect(miniObjective(s)).toContain("guide them to HOME");
-  at(s, HOME);
-  expect(spark.taken).toBe(true); expect(s.progress).toBe(1);
-  at(s, HOME); expect(s.progress).toBe(1);
+it("Grimble catches falling shards on contact, without followers or HOME delivery", () => {
+ const s=createMini(0),shard=s.sparks[0]!;
+ s.px=shard.x;s.py=250;shard.fallY=200;
+ stepMini(s,idle,0.05);expect(s.progress).toBe(0);
+ tick(s,3);expect(shard.taken).toBe(true);expect(shard.following).toBe(false);expect(s.progress).toBe(1);
+ at(s,HOME);expect(s.progress).toBe(1);
+ expect(miniObjective(s)).toContain("falling star shards");
 });
-it("Grimble's followers move with him; shadows slow him without losing rescued sparks", () => {
-  const s = createMini(0), spark = s.sparks[0]!;
-  at(s, spark); const x = spark.x;
-  s.px += 70; tick(s, 3); expect(spark.x).toBeGreaterThan(x);
-  const shadow = shadowPosition(0, s.elapsed + 0.05); at(s, shadow);
-  expect(s.invuln).toBeGreaterThan(0); expect(spark.following).toBe(true);
-  const px = s.px; stepMini(s, {...idle, x: 1}, 0.05);
-  expect(s.px - px).toBeCloseTo(7.5);
+it("missed shards fall again without resetting caught shards",()=>{
+ const s=createMini(0),shard=s.sparks[0]!;s.sparks[1]!.taken=true;s.progress=1;
+ shard.fallY=449;s.px=900;s.py=400;tick(s,1);
+ expect(shard.fallY).toBe(65);expect(s.progress).toBe(1);expect(s.sparks[1]!.taken).toBe(true);
 });
 it("Pip must hit the highlighted broken part; wrong hits are safe and cannot skip repairs", () => {
   const s = createMini(1);
@@ -63,7 +56,7 @@ it.each([0, 1, 2] as const)("hero %i completes all three story chapters with mat
   for (let stage = 0; stage < 3; stage++) {
     const s = createMini(hero, stage), lore = miniChapter(hero, stage);
     expect(lore.memories).toHaveLength(s.goal);
-    if (hero === 0) for (const spark of s.sparks) {at(s, spark); if(stage===0) at(s, HOME); else stepMini(s,{...idle,action:true},0.05); expect(s.message).toBe(lore.memories[s.progress - 1]);}
+    if (hero === 0) for (const spark of s.sparks) {at(s, spark); if(stage===0) {spark.fallY=s.py;stepMini(s,idle,0.05);} else stepMini(s,{...idle,action:true},0.05); expect(s.message).toBe(lore.memories[s.progress - 1]);}
     else if(hero===1 && stage===1) for(const piece of CIRCUIT)stepMini(s,{...idle,interact:piece},0.05);
     else if(hero===1 && stage===2) for(const lock of MACHINE_LOCKS){s.tiny=6;at(s,lock);stepMini(s,{...idle,action:true},0.05);}
     else if(hero===2 && stage===1) for(let i=0;i<3;i++)for(let t=0;t<MIRROR_ANGLES[i]!;t++)stepMini(s,{...idle,interact:i},0.05);
@@ -162,28 +155,12 @@ it("L cannot change progress or create copies after completion",()=>{
   for(const hero of [0,1,2] as const){const s=createMini(hero);s.status='won';stepMini(s,{...idle,ultimate:true},0.05);expect(s.ultimateCd).toBe(0);expect(s.illusions).toHaveLength(0);}
 });
 
-it("spark 2's control guides its incidental follower home instead of becoming a dead Find button",()=>{
-  const s=createMini(0);
-  stepMini(s,{...idle,findSpark:0},0.05);tick(s,80);
-  expect(s.sparks[1]!.following).toBe(true);
-  expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Guide spark 2 HOME",rescued:false});
-  stepMini(s,{...idle,findSpark:1,x:1},0.05);
-  expect(s.destination).toEqual(HOME);tick(s,80);
-  expect(s.sparks[1]!.taken).toBe(true);
-  expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Spark 2 · HOME ✓",rescued:true});
-  const count=s.progress;stepMini(s,{...idle,findSpark:1},0.05);expect(s.progress).toBe(count);
-});
-it("Find spark 2 also works directly from a fresh game",()=>{
-  const s=createMini(0);stepMini(s,{...idle,findSpark:1},0.05);tick(s,80);
-  expect(s.sparks[1]!.following).toBe(true);
-  stepMini(s,{...idle,findSpark:1},0.05);tick(s,80);expect(s.sparks[1]!.taken).toBe(true);
-});
-
-it("Guide HOME overrides lingering movement and delivers followers without repeated clicks",()=>{
-  const s=createMini(0);stepMini(s,{...idle,findSpark:0},0.05);tick(s,80);
-  stepMini(s,{...idle,guideHome:true,x:-1},0.05);
-  for(let i=0;i<120;i++) stepMini(s,{...idle,x:-1},0.05);
-  expect(s.progress).toBeGreaterThanOrEqual(2);expect(s.guidingHome).toBe(false);
+it("Catch shard controls remain usable until caught and restart resets every shard",()=>{
+ const s=createMini(0);expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Catch shard 2",rescued:false});
+ stepMini(s,{...idle,findSpark:1},0.05);tick(s,180);
+ expect(s.sparks[1]!.taken).toBe(true);
+ expect(sparkControl(s.sparks[1]!,1)).toEqual({label:"Shard 2 · CAUGHT ✓",rescued:true});
+ expect(createMini(0).sparks.every(shard=>!shard.taken)).toBe(true);
 });
 it("crypt lanterns require a nearby sweep, never escorting HOME",()=>{
   const s=createMini(0,1);at(s,s.sparks[0]!);at(s,HOME);expect(s.progress).toBe(0);
@@ -203,4 +180,22 @@ it("wood knocks count actual Pip swings, not frame redraws, gadgets or blocked c
  tick(s,8);expect(s.hammerHits).toBe(1);
  stepMini(s,{...idle,action:true},0.05);expect(s.hammerHits).toBe(2);
  expect(createMini(1).hammerHits).toBe(0);
+});
+
+it("the last gadget repair finishes before a simultaneous hammer input can reset the last toy",()=>{
+ const s=createMini(1);s.progress=5;s.part=2;
+ const last=REPAIR_PARTS[2];
+ s.projectile={x:400,y:250,tx:last.x,ty:last.y,age:0.59,gadget:0,move:"gadget",repairToy:5,repairPart:2};
+ stepMini(s,{...idle,action:true,aimX:last.x,aimY:last.y},0.05);
+ expect(s).toMatchObject({status:"won",progress:6,part:0,hammerHits:0,message:miniChapter(1,0).memories[5]});
+ expect(s.projectile).toBeNull();
+ const completed=structuredClone(s);stepMini(s,{...idle,action:true,skill:true},0.05);expect(s).toEqual(completed);
+});
+it("a gadget launched at an earlier toy cannot repair or interfere with the last toy",()=>{
+ const s=createMini(1);s.progress=4;s.part=2;const p=REPAIR_PARTS[2];
+ stepMini(s,{...idle,skill:true,aimX:p.x,aimY:p.y},0.05);
+ stepMini(s,{...idle,action:true,aimX:p.x,aimY:p.y},0.05);expect(s.progress).toBe(5);
+ for(const part of REPAIR_PARTS.slice(0,2)){tick(s,6);stepMini(s,{...idle,action:true,aimX:part.x,aimY:part.y},0.05);}
+ tick(s,15);expect(s).toMatchObject({progress:5,part:2,status:"playing"});
+ stepMini(s,{...idle,action:true,aimX:p.x,aimY:p.y},0.05);expect(s).toMatchObject({status:"won",progress:6});
 });

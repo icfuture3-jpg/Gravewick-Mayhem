@@ -2,7 +2,7 @@ import type { HeroId } from "./solo-story";
 import type { MiniState } from "./mini-game";
 
 export const CHALLENGES = [
-  ["Backyard spark rescue", "Keeper lantern vigil", "Star-gate seals"],
+  ["Falling star-shard catch", "Keeper lantern vigil", "Star-gate seals"],
   ["Market toy repair", "Prototype circuit assembly", "Tiny machine infiltration"],
   ["Lost library pages", "Hall of turning mirrors", "Write the sky's final page"],
 ] as const;

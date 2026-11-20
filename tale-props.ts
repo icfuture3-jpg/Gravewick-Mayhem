@@ -1,3 +1,4 @@
+import { workshopTable } from "./sprites";
 import { drawEnemy, type EnemyKind } from "./art";
 
 const TOY_MONSTERS: readonly EnemyKind[] = ["clown", "bat", "ghoul", "slime", "boogeyman", "nergal"];
@@ -70,4 +71,9 @@ export function drawWhimsicalLibrary(ctx: CanvasRenderingContext2D, time: number
     ctx.save(); ctx.shadowColor = "#ffdc8b"; ctx.shadowBlur = 16; ctx.fillStyle = "#ffe5a0";
     ctx.beginPath(); ctx.ellipse(x, y - 6, 4, 7, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   }
+}
+
+/** The furniture is a lit 3D bake, like the character sprites, not a flat rectangle. */
+export function drawWorkshopTable(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
+  if (workshopTable) ctx.drawImage(workshopTable,x,y,width,height);
 }
